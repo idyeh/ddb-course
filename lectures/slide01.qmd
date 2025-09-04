@@ -1,0 +1,765 @@
+---
+title: "分布式数据库开发"
+subtitle: "绪论：世界观与方法论"
+author: "叶鸿"
+date: "2025-09-03"
+lang: zh-CN
+format:
+  revealjs:
+    theme: [default]
+    slide-number: true
+    toc: false
+    overview: true
+    transition: slide
+    code-line-numbers: true
+    preview-links: auto
+    chalkboard: true
+---
+
+# 开场：一个思想实验
+
+## 从一个问题开始
+
+> **问**：如果让你管理全国 14 亿人的银行账户数据，你会怎么做？
+
+- 需求示例：
+  - 数据量（仅基础信息）：14 亿账户 × 1KB ≈ 1.4TB
+  - 峰值并发：每秒 100 万笔交易
+  - 可用性：全年停机 ≤ 5 分钟（≈ 99.999%）
+  - 一致性：**一分钱都不能错**
+
+## 从单机到分布式
+
+**单机**难以满足以上目标 → **分布式**几乎是唯一选项
+
+但分布式带来新的挑战：宕机、网络分区、时钟漂移、不一致……
+
+::: callout-note
+本课程要系统回答“如何在分布式环境中尽可能接近单机 ACID 的简单体验”
+:::
+
+## 一个真实的迁移案例
+
+一家全球排名前50的保险公司，其核心保单系统面临着数据量大、高并发、复杂逻辑和性能瓶颈的挑战，导致系统响应时间变慢。
+
+为了解决这些问题，该公司决定将核心保单系统从传统的Oracle数据库迁移到分布式SQL数据库TiDB。
+
+迁移后，新系统在业务高峰期表现出色，每秒查询量达到64,000次，平均响应时间仅为6毫秒，与之前的Oracle数据库相比，平均响应延迟降低了50%以上。
+
+[来源](https://www.pingcap.com/case-study/top-50-global-insurance-company-migrate-from-oracle-to-tidb/)
+
+::: callout-warning
+案例数字仅用于**规模感知**与在课堂上方法论讨论，不作对外披露或精确对照。
+:::
+
+## 教训
+
+- 传统商用单机数据库 → 分布式数据库
+- 典型考量：扩展性、成本、故障域隔离、跨地域、多活、监管合规等
+- **启示**：
+  - **分布式不是选择，而是必然**
+  - 技术决策都是**约束下的权衡**
+
+## “双十一”与极端峰值
+
+![](assets/shopping.png){.absolute top=100 right=80 width="300"}
+
+双十一第1秒
+
+- 并发用户 ≈ $5\times 10^7$
+- 商品查询 ≈ $1\times 10^8$ /s
+- 订单创建 ≈ $5.83\times 10^5$ /s
+- 支付请求 ≈ $4.8\times 10^5$ /s
+- 库存扣减 ≈ $1\times 10^6$ /s
+- 数据写入 ≈ 25 GB/s
+
+> **问**：100 台机器能否撑住？**答**：能，但会带来**新问题**
+
+## 新问题
+
+**极端场景暴露所有问题**
+
+- 热点商品：iPhone新品100万库存，1亿人抢
+- 库存一致性：不能超卖，不能少卖
+- 支付一致性：钱货必须对应
+- 级联故障：一个服务挂，全链路雪崩？
+- 数据倾斜：李佳琦直播间的流量是其他的1000倍
+
+## 技术演进
+
+1. 跨分片事务
+2. 热点库存与“超卖”
+3. 实时一致性
+4. 故障切换/恢复
+
+主从 → 分库分表 → 分布式 SQL → 云原生 → 智能调度（AI 热点预测）
+
+## “微信红包”的分布式哲学
+
+红包生命周期中的关键抉择：
+
+* 预先分配 vs 实时计算（空间换时间）
+* 处理并发抢红包：去重、防重复抢（唯一键/幂等）
+* 原子性（扣款/入账的成败一致）
+* 热点分片与锁竞争的缓解：**按红包ID分片**、热点池化、异步入账、优雅降级等
+
+## 分片策略
+
+抢同一红包的人会竞争同一把锁，用红包ID做分片键更贴合业务冲突域
+
+```python
+packet_shard = hash(packet_id) % shard_count
+```
+
+::: callout-note
+“好分片事半功倍”。后续我们会回答**分片键如何影响代价与冲突**。
+:::
+
+## 热点处理
+
+明星红包会成为热点。那么红包池化，预先分配到不同分片
+
+```python
+if is_celebrity(sender):
+    distribute_to_multiple_shards(packet)
+```
+
+## 延迟入账
+
+抢到显示金额，但异步入账
+用户体验好，系统压力小
+
+```python
+
+grab_result = try_grab(packet_id)  # 快速返回
+async_transfer(grab_result)        # 异步转账
+```
+
+::: callout-note
+用户体验和系统设计可以解耦
+:::
+
+## 2012：分布式数据库的“分水岭”
+
+两条路线、两种哲学：
+
+1. **Spanner**：引入 **TrueTime（时间区间）**，基于**受控不确定度**实现**外部一致性**（严格序）
+2. **Calvin**：**确定性调度**（先全局定序，再在各副本按序执行），降低在线协调成本
+
+::: callout-tip
+它们分别代表“**依赖物理时间的外部一致性**”与“**依赖逻辑定序的确定性执行**”。工程上均需权衡成本与灵活性。
+:::
+
+# 为什么是现在？
+
+## 时代背景 {.smaller}
+
+三大驱动力：
+
+- 数据爆炸
+
+  - 2010年：全球数据总量 1ZB
+  - 2020年：全球数据总量 64ZB
+  - 2030年：预计超过 1000ZB
+
+- 业务全球化
+
+  - 用户分布：全球各地
+  - 服务要求：就近访问
+  - 法规要求：数据主权
+
+- 成本压力
+
+  - 单机纵向扩展：成本指数增长
+  - 分布式横向扩展：成本线性增长
+
+## 技术演进脉络 {.smaller}
+
+- 1970s：关系模型诞生
+  - Codd提出关系代数，SQL成为标准
+- 1980s：ACID事务
+  - 商业数据库崛起（Oracle, DB2）
+- 2000s：NoSQL运动
+  - 牺牲一致性换取扩展性（MongoDB, Cassandra）
+- 2010s：NewSQL时代
+  - 鱼和熊掌兼得（Spanner, CockroachDB）
+- 2020s：云原生数据库
+  - 存算分离，Serverless（Aurora, Snowflake）
+
+## 根本矛盾与工作目标
+
+> **单机的简单性 vs 分布式的必要性**
+
+* 单机：简单、低延迟、强一致，但不可横向扩展
+* 分布式：可扩展、高可用、成本可控，但复杂度与不确定性上升
+
+**工作目标**：在分布式前提下，尽可能逼近“单机体验”。
+
+# 知识地图
+
+## 逻辑主线图
+
+```{mermaid}
+flowchart LR
+A[时间与日志] --> B[复制与共识] --> C[分片] --> D[分布式事务]
+--> E[分布式查询] --> F[快照与恢复]
+--> G[验证与可靠性] --> H[架构对比]
+```
+
+## 课程组织 {.smaller}
+
+| 课程名称                | 核心问题                         | 核心概念                        | 本质                   |
+| ----------------------- | -------------------------------- | ------------------------------- | ---------------------- |
+| **第1讲：时间与日志**   | 分布式系统中，"先后"是什么意思？ | Lamport时钟、向量时钟、WAL      | 用日志把不确定变成确定 |
+| **第2讲：复制与共识**   | 多个副本如何保持一致？           | Leader选举、日志复制、安全性    | 多数派决定真理         |
+| **第3讲：分片**         | 数据太大，一台机器放不下怎么办？ | Range分片、Hash分片、动态迁移   | 分而治之，各司其职     |
+| **第4讲：分布式事务**   | 跨分片事务如何保证ACID？         | 2PC、隔离级别、死锁检测         | 协调与隔离的平衡       |
+
+## 课程组织（续） {.smaller}
+
+| 课程名称                | 核心问题                         | 核心概念                        | 本质                   |
+| ----------------------- | -------------------------------- | ------------------------------- | ---------------------- |
+| **第5讲：分布式查询**     | 如何高效执行分布式查询？         | 分布式JOIN、谓词下推、代价估算  | 移动计算而非数据       |
+| **第6讲：快照与恢复**   | 系统崩溃了如何快速恢复？         | 检查点、MVCC快照、Follower Read | 时间旅行与状态重建     |
+| **第7讲：验证与可靠性** | 如何证明系统是正确的？           | Jepsen、线性一致性、故障注入    | 不要相信，要验证       |
+| **第8讲：架构对比**     | 不同架构如何选择？               | Spanner、Calvin、FoundationDB   | 没有银弹，只有权衡     |
+
+## 概念之间的依赖
+
+```
+   日志（有序性）
+      ↓
+   Raft（共识）→ 复制（多副本）
+      ↓
+   分片（扩展性）→ 跨分片事务（2PC）
+      ↓
+   MVCC（并发控制）→ 快照（一致性读）
+      ↓
+   查询优化（性能）→ 分布式JOIN
+      ↓
+   故障恢复（可用性）→ Jepsen测试（正确性）
+```
+
+# 分布式的哲学
+
+## CAP 不可能三角 {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+```{=html}
+<style>
+.cap-wrap { position: relative; width: 560px; height: 430px; margin: 0 auto; }
+.cap-title { position:absolute; left: 50%; top: -28px; transform: translateX(-50%); font-weight: 700; font-size: 0.95rem; }
+.cap-label { position:absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-weight: 800; font-size: 2.2rem; }
+
+.cap-label, .cap-title { text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+
+.cap-circle { position:absolute; width: 280px; height: 280px; border-radius: 50%; }
+
+.capC-pos { left: 70px;  top: 40px;  }
+.capA-pos { left: 200px; top: 40px;  }
+.capP-pos { left: 135px; top: 155px; }
+
+.cap-focus { transform: scale(1.08); opacity: .68; z-index: 3;
+             box-shadow: 0 0 0 6px rgba(255,255,255,.55), 0 12px 30px rgba(0,0,0,.25); }
+.cap-dim   { transform: scale(0.98); opacity: .20; z-index: 1; }
+</style>
+```
+
+::: {.cap-wrap}
+
+<div data-id="capC" class="cap-circle capC-pos" style="background: rgba(39,128,227,.35);">
+  <div class="cap-title">Consistency</div>
+  <div class="cap-label">C</div>
+</div>
+<div data-id="capA" class="cap-circle capA-pos" style="background: rgba(63,182,24,.35);">
+  <div class="cap-title">Availability</div>
+  <div class="cap-label">A</div>
+</div>
+<div data-id="capP" class="cap-circle capP-pos" style="background: rgba(232,62,140,.35);">
+  <div class="cap-title">Partition Tolerance</div>
+  <div class="cap-label">P</div>
+</div>
+:::
+
+## CAP 不可能三角：一致性（C） {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+::: {.cap-wrap}
+
+<div data-id="capC" class="cap-circle capC-pos cap-focus" style="background: rgba(39,128,227,.65);">
+  <div class="cap-title">Consistency</div>
+  <div class="cap-label">C</div>
+</div>
+<div data-id="capA" class="cap-circle capA-pos cap-dim" style="background: rgba(63,182,24,.35);">
+  <div class="cap-title">Availability</div>
+  <div class="cap-label">A</div>
+</div>
+<div data-id="capP" class="cap-circle capP-pos cap-dim" style="background: rgba(232,62,140,.35);">
+  <div class="cap-title">Partition Tolerance</div>
+  <div class="cap-label">P</div>
+</div>
+:::
+
+**当你从系统的任意一个节点读取数据时，都应该得到同样的结果**
+
+## CAP 不可能三角：可用性（A） {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+::: {.cap-wrap}
+
+<div data-id="capC" class="cap-circle capC-pos cap-dim" style="background: rgba(39,128,227,.35);">
+  <div class="cap-title">Consistency</div>
+  <div class="cap-label">C</div>
+</div>
+<div data-id="capA" class="cap-circle capA-pos cap-focus" style="background: rgba(63,182,24,.65);">
+  <div class="cap-title">Availability</div>
+  <div class="cap-label">A</div>
+</div>
+<div data-id="capP" class="cap-circle capP-pos cap-dim" style="background: rgba(232,62,140,.35);">
+  <div class="cap-title">Partition Tolerance</div>
+  <div class="cap-label">P</div>
+</div>
+:::
+
+**每个请求都能在有限时间内得到响应，无论系统内部某些节点是否出问题**
+
+## CAP 不可能三角：分区容错（P） {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+::: {.cap-wrap}
+
+<div data-id="capC" class="cap-circle capC-pos cap-dim" style="background: rgba(39,128,227,.35);">
+  <div class="cap-title">Consistency</div>
+  <div class="cap-label">C</div>
+</div>
+<div data-id="capA" class="cap-circle capA-pos cap-dim" style="background: rgba(63,182,24,.35);">
+  <div class="cap-title">Availability</div>
+  <div class="cap-label">A</div>
+</div>
+<div data-id="capP" class="cap-circle capP-pos cap-focus" style="background: rgba(232,62,140,.65);">
+  <div class="cap-title">Partition Tolerance</div>
+  <div class="cap-label">P</div>
+</div>
+:::
+
+**即使系统的网络被切割成若干部分（节点之间无法通信），系统整体仍能继续工作**
+
+## CAP 不可能三角
+
+* 现实中，网络分区（P）**必须考虑**
+* 因此实际在 C（一致性）与 A（可用性）间权衡
+  * 拒绝部分请求以维持一致性
+  * 允许服务继续但可能读到旧数据
+
+::: callout-important
+**更精确的现实**：很多系统通过配置与读写路径选择，在不同负载/故障情形下**动态**权衡 C/A，而非静态标签。
+:::
+
+## PACELC：更完整的权衡 {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+伪代码表述
+
+```python
+if (发生网络分区):
+  选 A（可用性） vs C（一致性）
+else:
+  选 L（延迟）vs C（一致性）
+```
+
+* 实践中常见：**读延迟**与**可见性（新鲜度）**之间的权衡 
+
+## PACELC 定理 {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+```{=html}
+<style>
+.pac-wrap { position: relative; width: 680px; height: 400px; margin: 0 auto; }
+.pac-box { position:absolute; width: 160px; height: 70px; border-radius: 10px;
+           display:flex; align-items:center; justify-content:center;
+           font-weight:600; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+.pac-arrow { position:absolute; font-size:1.5rem; font-weight:bold; color:#333; }
+
+/* 节点配色 */
+.nodeP { background:#e83e8c; left: 260px; top: 20px; }
+.nodeA { background:#3fb618; left: 60px;  top: 120px; }
+.nodeC1 { background:#2780e3; left: 460px; top: 120px; }
+.nodeE { background:#ffb400; left: 260px; top: 260px; }
+.nodeL { background:#6f42c1; left: 60px;  top: 360px; }
+.nodeC2 { background:#2780e3; left: 460px; top: 360px; }
+
+/* 高亮样式 */
+.focus { transform:scale(1.1); box-shadow:0 0 10px rgba(0,0,0,.4); z-index:3; }
+.dim   { opacity:.25; }
+</style>
+
+<div class="pac-wrap">
+  <!-- 顶层：分区 -->
+  <div data-id="P" class="pac-box nodeP">P</div>
+
+  <!-- 分区时选择 -->
+  <div data-id="A" class="pac-box nodeA">A</div>
+  <div data-id="C1" class="pac-box nodeC1">C</div>
+  <div class="pac-arrow" style="left:210px; top:70px;">↙</div>
+  <div class="pac-arrow" style="left:430px; top:70px;">↘</div>
+
+  <!-- 否则 Else -->
+  <div data-id="E" class="pac-box nodeE">E</div>
+
+  <!-- Else 时选择 -->
+  <div data-id="L" class="pac-box nodeL">L</div>
+  <div data-id="C2" class="pac-box nodeC2">C</div>
+  <div class="pac-arrow" style="left:210px; top:310px;">↙</div>
+  <div class="pac-arrow" style="left:430px; top:310px;">↘</div>
+</div>
+```
+
+## PACELC：分区 (P) {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+```{=html}
+<div class="pac-wrap">
+  <div data-id="P" class="pac-box nodeP focus">P</div>
+  <div data-id="A" class="pac-box nodeA">A</div>
+  <div data-id="C1" class="pac-box nodeC1">C</div>
+  <div data-id="E" class="pac-box nodeE dim">E</div>
+  <div data-id="L" class="pac-box nodeL dim">L</div>
+  <div data-id="C2" class="pac-box nodeC2 dim">C</div>
+</div>
+```
+
+## PACELC：否则 (E) {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+```{=html}
+<div class="pac-wrap">
+  <div data-id="P" class="pac-box nodeP dim">P</div>
+  <div data-id="A" class="pac-box nodeA dim">A</div>
+  <div data-id="C1" class="pac-box nodeC1 dim">C</div>
+  <div data-id="E" class="pac-box nodeE focus">E</div>
+  <div data-id="L" class="pac-box nodeL">L</div>
+  <div data-id="C2" class="pac-box nodeC2">C</div>
+</div>
+```
+
+## PACELC 定理小结 {auto-animate="true" auto-animate-easing="ease-in-out"}
+
+* **CAP**：分区时只能在一致性 (C) 和可用性 (A) 之间二选一
+* **PACELC**：即使没有分区，系统仍要在**延迟 (L)** 与 **一致性 (C)** 之间权衡
+
+::: callout-note
+CAP 只考虑出故障时的取舍；PACELC 还提醒平时正常时也要二选一
+:::
+
+## 关于分布式系统的观点
+
+:::: columns
+::: {.column width="50%" .fragment}
+- 网络是可靠的
+- 延迟是零
+- 带宽是无限的
+- 网络是安全的
+- 拓扑不会改变
+- 只有一个管理员
+- 传输成本是零
+- 网络是同构的
+:::
+::: {.column width="50%" .fragment}
+- 错：网络会丢包、延迟
+- 错：光速也需要时间
+- 错：带宽很贵
+- 错：需要加密
+- 错：节点会增减
+- 错：多团队协作
+- 错：序列化有开销
+- 错：异构是常态
+:::
+::::
+
+## 设计四原则
+
+1. 故障是常态（容错先行）
+2. 保持简单（优先采用经过验证的原语，如 Raft）
+3. 优先避开跨分片事务（以分片键设计降低冲突域）
+4. 可观测性至上（可追踪、可解释、可回放）
+
+# 如何学这门课
+
+## 理论 ↔ 实践的迭代闭环
+
+* 理论：问题本质 → 经典算法 → 正确性证明 → 复杂度
+* 实践：跑系统 → 注入故障 → 实现最简版 → 读真实代码
+* 迭代：在“实现—验证—反思”中建立直觉
+
+## 实验环境建议
+
+```bash
+# Docker（必需）
+docker --version
+
+# TiDB Playground（分布式SQL，按需在实验课使用）
+tiup playground
+
+# etcd（共识/配置示例用）
+docker run -d --name etcd -p 2379:2379 -p 2380:2380 quay.io/coreos/etcd:latest
+
+# Python 工具箱（采集/测试/绘图）
+python3 -m venv venv && source venv/bin/activate
+pip install requests asyncio numpy
+```
+
+::: callout-tip
+为兼容 Windows 系统，我们选择**容器优先**
+:::
+
+## 推荐学习路径
+
+1. 快速通读（建立地标）
+2. 深入理解（推导/证明 + 编程作业）
+3. 拓展研究（论文/实现/优化）
+
+# 工具与生态
+
+## 主流系统图谱
+
+* 分布式 SQL：TiDB（MySQL 兼容，HTAP）、CockroachDB（PG 兼容，全球部署）、YugabyteDB、VoltDB（内存）
+* NoSQL：Cassandra（AP 倾向）、MongoDB（可配置权衡）、HBase（CP 倾向）、DynamoDB（托管）
+* 云原生：Aurora（存算分离）、Spanner（全球一致）、CosmosDB（多模型）、PolarDB 等
+
+::: callout-note
+**术语澄清**：MongoDB、Cassandra、HBase 的 “CP/AP” 归类与**具体读写策略/故障情形**相关，切勿过度简化为静态标签。
+:::
+
+## 测试与验证工具
+
+* 正确性：Jepsen、Elle、Maelstrom
+* 性能：YCSB、TPC-C、sysbench
+* 混沌：Chaos Monkey、Pumba、Litmus
+
+# 学科前沿与趋势
+
+## 研究热点
+
+* **HTAP**（行列混合/副本隔离/新鲜度）
+* **Serverless/存算分离**（按需计费/弹性/冷启动）
+* **AI 驱动运维/优化**（索引推荐/代价估计/异常诊断）
+* **可验证数据库**（仿真、形式化、模型检查）
+* **专业化数据库**（时序/图/向量）
+
+## 未来 5 年？
+
+1. 智能化：优化器与自适应调优
+2. 边缘化：端-边-云数据库协同
+3. 专业化：向量/时序/图的工程化
+4. 标准化：跨云与数据主权的标准推进
+
+# 课程安排与考核
+
+## 学习建议
+
+**Before → In → After**
+
+::: {.incremental}
+* 课前：预习讲义、跑通脚手架、带问题来
+* 课堂：抓住因果链，不纠结实现枝节
+* 课后：作业与快评卡，按“证据—结论”写作
+:::
+
+## 成绩构成
+
+* 平时作业：20%（巩固知识点）
+* 平时实验：30% (阶段性实践)
+* 期中测试：20%（以获取PCTA证书为准）
+* 期末项目：30%
+  * 开发类：基于分布式数据库设计并实现一个应用程序（落地场景）
+  * 分析类：用所学知识分析市面上的分布式系统
+  * 研究类：创造性地提出新方案或新模式并且动手做验证
+
+## 学习资源
+
+* 书籍：[DDIA](https://dataintensive.net/)、[Database Internals](https://www.databass.dev/)、教材等
+* 课程：[MIT 6.824](https://pdos.csail.mit.edu/6.824/)、[CMU 15-445](https://15445.courses.cs.cmu.edu/)、[Stanford CS245](https://canvas.stanford.edu/courses/146728)等
+* 论文：[Spanner](https://static.googleusercontent.com/media/research.google.com/en//archive/spanner-osdi2012.pdf)（外部一致性）、[Calvin](https://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf)（确定性）、[Raft](https://raft.github.io/raft.pdf)（共识）、[Aurora](https://pages.cs.wisc.edu/~yxy/cs764-f20/papers/aurora-sigmod-17.pdf)（云原生）、[FoundationDB](https://www.foundationdb.org/files/fdb-paper.pdf)（解耦与仿真）等
+* 社区：[TiDB](https://cn.pingcap.com/courses-catalog/)等
+
+# 动手练：感受分布式
+
+## 分布式计数器简化版 {.smaller}
+
+> 理解在“延迟/丢包/异步复制”条件下，即使是最简单的计数也会变得复杂
+
+```python
+#!/usr/bin/env python3
+"""
+实验：模拟分布式计数器
+目标：通过对比，理解分布式环境下操作的复杂性、常见问题及解决方案。
+"""
+
+import threading
+import time
+import random
+import logging
+
+# 配置日志，方便观察并发执行过程
+logging.basicConfig(
+    level=logging.INFO,
+    format="(%(threadName)-10s) %(message)s",
+)
+
+
+class DistributedCounter:
+    """分布式计数器模拟"""
+
+    def __init__(self, nodes=3, method="operation"):
+        self.nodes = [0] * nodes
+        # 这个锁是Python多线程编程中为了保护 self.nodes 列表线程安全的“本地锁”。
+        # 它绝不代表一个“分布式锁”。在真实的分布式系统中，没有这种跨所有节点的共享内存和全局锁。
+        self.lock = threading.Lock()
+        self.network_delay = (0.01, 0.05)  # 模拟网络延迟范围
+        self.failure_rate = 0.1  # 模拟网络或节点故障的概率
+        self.replicate_method = method
+
+    def _simulate_network(self, operation_name, from_node, to_node=None):
+        """模拟网络延迟和故障，并打印日志"""
+        time.sleep(random.uniform(*self.network_delay))
+        if random.random() < self.failure_rate:
+            if to_node is not None:
+                logging.warning(
+                    f"网络故障: 节点 {from_node} -> 节点 {to_node} 的 {operation_name} 失败!"
+                )
+            else:
+                logging.warning(f"网络故障: 节点 {from_node} 的 {operation_name} 失败!")
+            return False
+        return True
+
+    def increment(self, node_id):
+        """
+        一个外部请求到达某个节点，使其计数器加一。
+        分为两步：
+        1. 本地增加计数。
+        2. 将变更“异步”地复制到其他节点。
+        """
+        logging.info(f"节点 {node_id} 收到 increment 请求。")
+
+        # 1. 本地自增 (原子操作)
+        with self.lock:
+            initial_value = self.nodes[node_id]
+            self.nodes[node_id] += 1
+            logging.info(
+                f"节点 {node_id} 本地计数: {initial_value} -> {self.nodes[node_id]}"
+            )
+
+        # 2. 将变更异步复制到其他节点
+        for i in range(len(self.nodes)):
+            if i != node_id:
+                # 使用下面的两种同步方法之一
+                if self.replicate_method == "state":
+                    method = self.replicate_state
+                else:
+                    method = self.replicate_operation
+
+                threading.Thread(
+                    target=method, args=(node_id, i), name=f"Sync-{node_id}to{i}"
+                ).start()
+
+    # --- 状态复制 ---
+    def replicate_state(self, from_node, to_node):
+        """
+        直接用我的值覆盖你的值。
+        这是导致“更新丢失”问题的根源。
+        """
+        if not self._simulate_network("状态复制", from_node, to_node):
+            return
+
+        with self.lock:
+            val_from = self.nodes[from_node]
+            val_to_before = self.nodes[to_node]
+            # 无论对方的值是多少，都强制用我的值覆盖
+            self.nodes[to_node] = val_from
+            logging.info(
+                f"状态复制: 节点 {from_node} ({val_from}) -> 节点 {to_node} ({val_to_before})，更新后节点 {to_node} 值为 {self.nodes[to_node]}"
+            )
+
+    # --- 操作复制 ---
+    def replicate_operation(self, from_node, to_node):
+        """
+        告诉其他节点“我做了一次加一操作”而非“我的新值是X”。
+        可以避免更新丢失问题。
+        """
+        if not self._simulate_network("操作复制", from_node, to_node):
+            return
+
+        with self.lock:
+            val_to_before = self.nodes[to_node]
+            # 将“加一”这个操作在另一个节点上重放
+            self.nodes[to_node] += 1
+            logging.info(
+                f"操作复制: 节点 {from_node} 通知 节点 {to_node} 执行 increment。节点 {to_node} 计数: {val_to_before} -> {self.nodes[to_node]}"
+            )
+
+    def get_nodes_state(self):
+        """获取所有节点当前的状态"""
+        with self.lock:
+            return list(self.nodes)
+
+
+# --- 演示场景 ---
+
+
+def demo(requests=20, nodes=3, replicate_method="operation"):
+    """演示1: 数据不一致性 和 最终一致性"""
+    print("展示在并发更新下，不同节点的数据会短暂不一致，但最终会趋于一致。")
+
+    counter = DistributedCounter(nodes, method=replicate_method)
+    # 演示刻意只让一个节点接收请求，以简化复制过程，突出不一致性
+    threads = []
+    for _ in range(requests):
+        t = threading.Thread(target=counter.increment, args=(0,), name=f"Request-{_}")
+        threads.append(t)
+        t.start()
+
+    # 在操作过程中，多次查看状态，观察不一致
+    for i in range(3):
+        time.sleep(0.1)
+        print(f"中间状态 {i + 1}: {counter.get_nodes_state()}")
+
+    for t in threads:
+        t.join()
+
+    # 等待所有异步的同步线程完成
+    time.sleep(0.5)
+    print(f"预期结果: 所有节点值都为 {requests} (如果网络没有故障)")
+    print(f"最终状态: {counter.get_nodes_state()}")
+
+
+if __name__ == "__main__":
+    demo(replicate_method="state")
+    print("结束演示")
+```
+
+## 结果与反思
+
+* 立即读：各节点值不同；与“预期总和”不符
+* 稍后读：趋于一致（但正确性无保障）
+* **讨论**：
+  * 并发写如何避免丢失？
+  * 如何定义“线性一致/可串行化/最终一致”？
+  * 我们需要哪些原语：
+    * **日志复制、投票、多数派提交、MVCC**……
+
+# 总结 & 预告
+
+## 本讲要点
+
+1. 分布式是必然；工程是权衡
+2. 用“**时间与日志**”这根线索贯穿课程
+3. 不要相信，要验证
+
+## 学习心态论
+
+- 保持好奇：每个设计都有其道理
+- 勇于质疑：为什么非此不可？
+- 动手实践：“纸上得来终觉浅”
+- 系统思考：局部最优≠全局最优
+
+## 下节预告
+
+分布式时间观与“日志”总线
+
+* 没有全局时钟如何定义先后？
+* 日志如何把“异步世界”转成“确定序列”？
+* Lamport/向量时钟、WAL的角色与边界
+
+# 欢迎交流

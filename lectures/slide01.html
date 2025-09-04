@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<script src="slide01_files/libs/clipboard/clipboard.min.js"></script>
+<script src="slide01_files/libs/quarto-html/tabby.min.js"></script>
+<script src="slide01_files/libs/quarto-html/popper.min.js"></script>
+<script src="slide01_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="slide01_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="slide01_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="slide01_files/libs/quarto-html/quarto-syntax-highlighting-ea385d0e468b0dd5ea5bf0780b1290d9.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.33">
+
+  <meta name="author" content="叶鸿">
+  <meta name="dcterms.date" content="2025-09-03">
+  <title>分布式数据库开发</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="slide01_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="slide01_files/libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      { color: #003b4f; background-color: #f1f3f5; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #003b4f; } /* Normal */
+    code span.al { color: #ad0000; } /* Alert */
+    code span.an { color: #5e5e5e; } /* Annotation */
+    code span.at { color: #657422; } /* Attribute */
+    code span.bn { color: #ad0000; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #20794d; } /* Char */
+    code span.cn { color: #8f5902; } /* Constant */
+    code span.co { color: #5e5e5e; } /* Comment */
+    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
+    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
+    code span.dt { color: #ad0000; } /* DataType */
+    code span.dv { color: #ad0000; } /* DecVal */
+    code span.er { color: #ad0000; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #ad0000; } /* Float */
+    code span.fu { color: #4758ab; } /* Function */
+    code span.im { color: #00769e; } /* Import */
+    code span.in { color: #5e5e5e; } /* Information */
+    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
+    code span.op { color: #5e5e5e; } /* Operator */
+    code span.ot { color: #003b4f; } /* Other */
+    code span.pp { color: #ad0000; } /* Preprocessor */
+    code span.sc { color: #5e5e5e; } /* SpecialChar */
+    code span.ss { color: #20794d; } /* SpecialString */
+    code span.st { color: #20794d; } /* String */
+    code span.va { color: #111111; } /* Variable */
+    code span.vs { color: #20794d; } /* VerbatimString */
+    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="slide01_files/libs/revealjs/dist/theme/quarto-f563837468303362081e247dddd440d0.css">
+  <link href="slide01_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="slide01_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="slide01_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="slide01_files/libs/revealjs/plugin/reveal-chalkboard/font-awesome/css/all.css" rel="stylesheet">
+  <link href="slide01_files/libs/revealjs/plugin/reveal-chalkboard/style.css" rel="stylesheet">
+  <link href="slide01_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+  <script src="slide01_files/libs/quarto-diagram/mermaid.min.js"></script>
+  <script src="slide01_files/libs/quarto-diagram/mermaid-init.js"></script>
+  <link href="slide01_files/libs/quarto-diagram/mermaid.css" rel="stylesheet">
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">分布式数据库开发</h1>
+  <p class="subtitle">绪论：世界观与方法论</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+叶鸿 
+</div>
+</div>
+</div>
+
+  <p class="date">2025-09-03</p>
+</section>
+<section>
+<section id="开场一个思想实验" class="title-slide slide level1 center">
+<h1>开场：一个思想实验</h1>
+
+</section>
+<section id="从一个问题开始" class="slide level2">
+<h2>从一个问题开始</h2>
+<blockquote>
+<p><strong>问</strong>：如果让你管理全国 14 亿人的银行账户数据，你会怎么做？</p>
+</blockquote>
+<ul>
+<li>需求示例：
+<ul>
+<li>数据量（仅基础信息）：14 亿账户 × 1KB ≈ 1.4TB</li>
+<li>峰值并发：每秒 100 万笔交易</li>
+<li>可用性：全年停机 ≤ 5 分钟（≈ 99.999%）</li>
+<li>一致性：<strong>一分钱都不能错</strong></li>
+</ul></li>
+</ul>
+</section>
+<section id="从单机到分布式" class="slide level2">
+<h2>从单机到分布式</h2>
+<p><strong>单机</strong>难以满足以上目标 → <strong>分布式</strong>几乎是唯一选项</p>
+<p>但分布式带来新的挑战：宕机、网络分区、时钟漂移、不一致……</p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p>本课程要系统回答“如何在分布式环境中尽可能接近单机 ACID 的简单体验”</p>
+</div>
+</div>
+</div>
+</section>
+<section id="一个真实的迁移案例" class="slide level2">
+<h2>一个真实的迁移案例</h2>
+<p>一家全球排名前50的保险公司，其核心保单系统面临着数据量大、高并发、复杂逻辑和性能瓶颈的挑战，导致系统响应时间变慢。</p>
+<p>为了解决这些问题，该公司决定将核心保单系统从传统的Oracle数据库迁移到分布式SQL数据库TiDB。</p>
+<p>迁移后，新系统在业务高峰期表现出色，每秒查询量达到64,000次，平均响应时间仅为6毫秒，与之前的Oracle数据库相比，平均响应延迟降低了50%以上。</p>
+<p><a href="https://www.pingcap.com/case-study/top-50-global-insurance-company-migrate-from-oracle-to-tidb/">来源</a></p>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>警告</strong></p>
+</div>
+<div class="callout-content">
+<p>案例数字仅用于<strong>规模感知</strong>与在课堂上方法论讨论，不作对外披露或精确对照。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="教训" class="slide level2">
+<h2>教训</h2>
+<ul>
+<li>传统商用单机数据库 → 分布式数据库</li>
+<li>典型考量：扩展性、成本、故障域隔离、跨地域、多活、监管合规等</li>
+<li><strong>启示</strong>：
+<ul>
+<li><strong>分布式不是选择，而是必然</strong></li>
+<li>技术决策都是<strong>约束下的权衡</strong></li>
+</ul></li>
+</ul>
+</section>
+<section id="双十一与极端峰值" class="slide level2">
+<h2>“双十一”与极端峰值</h2>
+<p><img data-src="assets/shopping.png" class="absolute" style="top: 100px; right: 80px; width: 300px; "></p>
+<p>双十一第1秒</p>
+<ul>
+<li>并发用户 ≈ <span class="math inline">\(5\times 10^7\)</span></li>
+<li>商品查询 ≈ <span class="math inline">\(1\times 10^8\)</span> /s</li>
+<li>订单创建 ≈ <span class="math inline">\(5.83\times 10^5\)</span> /s</li>
+<li>支付请求 ≈ <span class="math inline">\(4.8\times 10^5\)</span> /s</li>
+<li>库存扣减 ≈ <span class="math inline">\(1\times 10^6\)</span> /s</li>
+<li>数据写入 ≈ 25 GB/s</li>
+</ul>
+<blockquote>
+<p><strong>问</strong>：100 台机器能否撑住？<strong>答</strong>：能，但会带来<strong>新问题</strong></p>
+</blockquote>
+</section>
+<section id="新问题" class="slide level2">
+<h2>新问题</h2>
+<p><strong>极端场景暴露所有问题</strong></p>
+<ul>
+<li>热点商品：iPhone新品100万库存，1亿人抢</li>
+<li>库存一致性：不能超卖，不能少卖</li>
+<li>支付一致性：钱货必须对应</li>
+<li>级联故障：一个服务挂，全链路雪崩？</li>
+<li>数据倾斜：李佳琦直播间的流量是其他的1000倍</li>
+</ul>
+</section>
+<section id="技术演进" class="slide level2">
+<h2>技术演进</h2>
+<ol type="1">
+<li>跨分片事务</li>
+<li>热点库存与“超卖”</li>
+<li>实时一致性</li>
+<li>故障切换/恢复</li>
+</ol>
+<p>主从 → 分库分表 → 分布式 SQL → 云原生 → 智能调度（AI 热点预测）</p>
+</section>
+<section id="微信红包的分布式哲学" class="slide level2">
+<h2>“微信红包”的分布式哲学</h2>
+<p>红包生命周期中的关键抉择：</p>
+<ul>
+<li>预先分配 vs 实时计算（空间换时间）</li>
+<li>处理并发抢红包：去重、防重复抢（唯一键/幂等）</li>
+<li>原子性（扣款/入账的成败一致）</li>
+<li>热点分片与锁竞争的缓解：<strong>按红包ID分片</strong>、热点池化、异步入账、优雅降级等</li>
+</ul>
+</section>
+<section id="分片策略" class="slide level2">
+<h2>分片策略</h2>
+<p>抢同一红包的人会竞争同一把锁，用红包ID做分片键更贴合业务冲突域</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href=""></a>packet_shard <span class="op">=</span> <span class="bu">hash</span>(packet_id) <span class="op">%</span> shard_count</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p>“好分片事半功倍”。后续我们会回答<strong>分片键如何影响代价与冲突</strong>。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="热点处理" class="slide level2">
+<h2>热点处理</h2>
+<p>明星红包会成为热点。那么红包池化，预先分配到不同分片</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href=""></a><span class="cf">if</span> is_celebrity(sender):</span>
+<span id="cb2-2"><a href=""></a>    distribute_to_multiple_shards(packet)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="延迟入账" class="slide level2">
+<h2>延迟入账</h2>
+<p>抢到显示金额，但异步入账 用户体验好，系统压力小</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href=""></a></span>
+<span id="cb3-2"><a href=""></a>grab_result <span class="op">=</span> try_grab(packet_id)  <span class="co"># 快速返回</span></span>
+<span id="cb3-3"><a href=""></a>async_transfer(grab_result)        <span class="co"># 异步转账</span></span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p>用户体验和系统设计可以解耦</p>
+</div>
+</div>
+</div>
+</section>
+<section id="分布式数据库的分水岭" class="slide level2">
+<h2>2012：分布式数据库的“分水岭”</h2>
+<p>两条路线、两种哲学：</p>
+<ol type="1">
+<li><strong>Spanner</strong>：引入 <strong>TrueTime（时间区间）</strong>，基于<strong>受控不确定度</strong>实现<strong>外部一致性</strong>（严格序）</li>
+<li><strong>Calvin</strong>：<strong>确定性调度</strong>（先全局定序，再在各副本按序执行），降低在线协调成本</li>
+</ol>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>提示</strong></p>
+</div>
+<div class="callout-content">
+<p>它们分别代表“<strong>依赖物理时间的外部一致性</strong>”与“<strong>依赖逻辑定序的确定性执行</strong>”。工程上均需权衡成本与灵活性。</p>
+</div>
+</div>
+</div>
+</section></section>
+<section>
+<section id="为什么是现在" class="title-slide slide level1 center">
+<h1>为什么是现在？</h1>
+
+</section>
+<section id="时代背景" class="slide level2 smaller">
+<h2>时代背景</h2>
+<p>三大驱动力：</p>
+<ul>
+<li><p>数据爆炸</p>
+<ul>
+<li>2010年：全球数据总量 1ZB</li>
+<li>2020年：全球数据总量 64ZB</li>
+<li>2030年：预计超过 1000ZB</li>
+</ul></li>
+<li><p>业务全球化</p>
+<ul>
+<li>用户分布：全球各地</li>
+<li>服务要求：就近访问</li>
+<li>法规要求：数据主权</li>
+</ul></li>
+<li><p>成本压力</p>
+<ul>
+<li>单机纵向扩展：成本指数增长</li>
+<li>分布式横向扩展：成本线性增长</li>
+</ul></li>
+</ul>
+</section>
+<section id="技术演进脉络" class="slide level2 smaller">
+<h2>技术演进脉络</h2>
+<ul>
+<li>1970s：关系模型诞生
+<ul>
+<li>Codd提出关系代数，SQL成为标准</li>
+</ul></li>
+<li>1980s：ACID事务
+<ul>
+<li>商业数据库崛起（Oracle, DB2）</li>
+</ul></li>
+<li>2000s：NoSQL运动
+<ul>
+<li>牺牲一致性换取扩展性（MongoDB, Cassandra）</li>
+</ul></li>
+<li>2010s：NewSQL时代
+<ul>
+<li>鱼和熊掌兼得（Spanner, CockroachDB）</li>
+</ul></li>
+<li>2020s：云原生数据库
+<ul>
+<li>存算分离，Serverless（Aurora, Snowflake）</li>
+</ul></li>
+</ul>
+</section>
+<section id="根本矛盾与工作目标" class="slide level2">
+<h2>根本矛盾与工作目标</h2>
+<blockquote>
+<p><strong>单机的简单性 vs 分布式的必要性</strong></p>
+</blockquote>
+<ul>
+<li>单机：简单、低延迟、强一致，但不可横向扩展</li>
+<li>分布式：可扩展、高可用、成本可控，但复杂度与不确定性上升</li>
+</ul>
+<p><strong>工作目标</strong>：在分布式前提下，尽可能逼近“单机体验”。</p>
+</section></section>
+<section>
+<section id="知识地图" class="title-slide slide level1 center">
+<h1>知识地图</h1>
+
+</section>
+<section id="逻辑主线图" class="slide level2">
+<h2>逻辑主线图</h2>
+<div class="cell" data-reveal="true" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+A[时间与日志] --&gt; B[复制与共识] --&gt; C[分片] --&gt; D[分布式事务]
+--&gt; E[分布式查询] --&gt; F[快照与恢复]
+--&gt; G[验证与可靠性] --&gt; H[架构对比]
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="课程组织" class="slide level2 smaller">
+<h2>课程组织</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 29%">
+<col style="width: 28%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>课程名称</th>
+<th>核心问题</th>
+<th>核心概念</th>
+<th>本质</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>第1讲：时间与日志</strong></td>
+<td>分布式系统中，“先后”是什么意思？</td>
+<td>Lamport时钟、向量时钟、WAL</td>
+<td>用日志把不确定变成确定</td>
+</tr>
+<tr class="even">
+<td><strong>第2讲：复制与共识</strong></td>
+<td>多个副本如何保持一致？</td>
+<td>Leader选举、日志复制、安全性</td>
+<td>多数派决定真理</td>
+</tr>
+<tr class="odd">
+<td><strong>第3讲：分片</strong></td>
+<td>数据太大，一台机器放不下怎么办？</td>
+<td>Range分片、Hash分片、动态迁移</td>
+<td>分而治之，各司其职</td>
+</tr>
+<tr class="even">
+<td><strong>第4讲：分布式事务</strong></td>
+<td>跨分片事务如何保证ACID？</td>
+<td>2PC、隔离级别、死锁检测</td>
+<td>协调与隔离的平衡</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="课程组织续" class="slide level2 smaller">
+<h2>课程组织（续）</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 29%">
+<col style="width: 28%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>课程名称</th>
+<th>核心问题</th>
+<th>核心概念</th>
+<th>本质</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>第5讲：分布式查询</strong></td>
+<td>如何高效执行分布式查询？</td>
+<td>分布式JOIN、谓词下推、代价估算</td>
+<td>移动计算而非数据</td>
+</tr>
+<tr class="even">
+<td><strong>第6讲：快照与恢复</strong></td>
+<td>系统崩溃了如何快速恢复？</td>
+<td>检查点、MVCC快照、Follower Read</td>
+<td>时间旅行与状态重建</td>
+</tr>
+<tr class="odd">
+<td><strong>第7讲：验证与可靠性</strong></td>
+<td>如何证明系统是正确的？</td>
+<td>Jepsen、线性一致性、故障注入</td>
+<td>不要相信，要验证</td>
+</tr>
+<tr class="even">
+<td><strong>第8讲：架构对比</strong></td>
+<td>不同架构如何选择？</td>
+<td>Spanner、Calvin、FoundationDB</td>
+<td>没有银弹，只有权衡</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="概念之间的依赖" class="slide level2">
+<h2>概念之间的依赖</h2>
+<pre><code>   日志（有序性）
+      ↓
+   Raft（共识）→ 复制（多副本）
+      ↓
+   分片（扩展性）→ 跨分片事务（2PC）
+      ↓
+   MVCC（并发控制）→ 快照（一致性读）
+      ↓
+   查询优化（性能）→ 分布式JOIN
+      ↓
+   故障恢复（可用性）→ Jepsen测试（正确性）</code></pre>
+</section></section>
+<section>
+<section id="分布式的哲学" class="title-slide slide level1 center">
+<h1>分布式的哲学</h1>
+
+</section>
+<section id="cap-不可能三角" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">CAP 不可能三角</h2>
+<style>
+.cap-wrap { position: relative; width: 560px; height: 430px; margin: 0 auto; }
+.cap-title { position:absolute; left: 50%; top: -28px; transform: translateX(-50%); font-weight: 700; font-size: 0.95rem; }
+.cap-label { position:absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-weight: 800; font-size: 2.2rem; }
+
+.cap-label, .cap-title { text-shadow: 0 1px 2px rgba(0,0,0,.25); }
+
+.cap-circle { position:absolute; width: 280px; height: 280px; border-radius: 50%; }
+
+.capC-pos { left: 70px;  top: 40px;  }
+.capA-pos { left: 200px; top: 40px;  }
+.capP-pos { left: 135px; top: 155px; }
+
+.cap-focus { transform: scale(1.08); opacity: .68; z-index: 3;
+             box-shadow: 0 0 0 6px rgba(255,255,255,.55), 0 12px 30px rgba(0,0,0,.25); }
+.cap-dim   { transform: scale(0.98); opacity: .20; z-index: 1; }
+</style>
+<div class="cap-wrap">
+<div class="cap-circle capC-pos" data-id="capC" style="background: rgba(39,128,227,.35);">
+<div class="cap-title">
+Consistency
+</div>
+<div class="cap-label">
+C
+</div>
+</div>
+<div class="cap-circle capA-pos" data-id="capA" style="background: rgba(63,182,24,.35);">
+<div class="cap-title">
+Availability
+</div>
+<div class="cap-label">
+A
+</div>
+</div>
+<div class="cap-circle capP-pos" data-id="capP" style="background: rgba(232,62,140,.35);">
+<div class="cap-title">
+Partition Tolerance
+</div>
+<div class="cap-label">
+P
+</div>
+</div>
+</div>
+</section>
+<section id="cap-不可能三角一致性c" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">CAP 不可能三角：一致性（C）</h2>
+<div class="cap-wrap">
+<div class="cap-circle capC-pos cap-focus" data-id="capC" style="background: rgba(39,128,227,.65);">
+<div class="cap-title">
+Consistency
+</div>
+<div class="cap-label">
+C
+</div>
+</div>
+<div class="cap-circle capA-pos cap-dim" data-id="capA" style="background: rgba(63,182,24,.35);">
+<div class="cap-title">
+Availability
+</div>
+<div class="cap-label">
+A
+</div>
+</div>
+<div class="cap-circle capP-pos cap-dim" data-id="capP" style="background: rgba(232,62,140,.35);">
+<div class="cap-title">
+Partition Tolerance
+</div>
+<div class="cap-label">
+P
+</div>
+</div>
+</div>
+<p><strong>当你从系统的任意一个节点读取数据时，都应该得到同样的结果</strong></p>
+</section>
+<section id="cap-不可能三角可用性a" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">CAP 不可能三角：可用性（A）</h2>
+<div class="cap-wrap">
+<div class="cap-circle capC-pos cap-dim" data-id="capC" style="background: rgba(39,128,227,.35);">
+<div class="cap-title">
+Consistency
+</div>
+<div class="cap-label">
+C
+</div>
+</div>
+<div class="cap-circle capA-pos cap-focus" data-id="capA" style="background: rgba(63,182,24,.65);">
+<div class="cap-title">
+Availability
+</div>
+<div class="cap-label">
+A
+</div>
+</div>
+<div class="cap-circle capP-pos cap-dim" data-id="capP" style="background: rgba(232,62,140,.35);">
+<div class="cap-title">
+Partition Tolerance
+</div>
+<div class="cap-label">
+P
+</div>
+</div>
+</div>
+<p><strong>每个请求都能在有限时间内得到响应，无论系统内部某些节点是否出问题</strong></p>
+</section>
+<section id="cap-不可能三角分区容错p" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">CAP 不可能三角：分区容错（P）</h2>
+<div class="cap-wrap">
+<div class="cap-circle capC-pos cap-dim" data-id="capC" style="background: rgba(39,128,227,.35);">
+<div class="cap-title">
+Consistency
+</div>
+<div class="cap-label">
+C
+</div>
+</div>
+<div class="cap-circle capA-pos cap-dim" data-id="capA" style="background: rgba(63,182,24,.35);">
+<div class="cap-title">
+Availability
+</div>
+<div class="cap-label">
+A
+</div>
+</div>
+<div class="cap-circle capP-pos cap-focus" data-id="capP" style="background: rgba(232,62,140,.65);">
+<div class="cap-title">
+Partition Tolerance
+</div>
+<div class="cap-label">
+P
+</div>
+</div>
+</div>
+<p><strong>即使系统的网络被切割成若干部分（节点之间无法通信），系统整体仍能继续工作</strong></p>
+</section>
+<section id="cap-不可能三角-1" class="slide level2">
+<h2>CAP 不可能三角</h2>
+<ul>
+<li>现实中，网络分区（P）<strong>必须考虑</strong></li>
+<li>因此实际在 C（一致性）与 A（可用性）间权衡
+<ul>
+<li>拒绝部分请求以维持一致性</li>
+<li>允许服务继续但可能读到旧数据</li>
+</ul></li>
+</ul>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>重要</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>更精确的现实</strong>：很多系统通过配置与读写路径选择，在不同负载/故障情形下<strong>动态</strong>权衡 C/A，而非静态标签。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="pacelc更完整的权衡" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">PACELC：更完整的权衡</h2>
+<p>伪代码表述</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy" data-id="quarto-animate-code"><code class="sourceCode python hljs"><span id="cb5-1" class="hljs-ln-code"><a href=""></a><span class="cf">if</span> (发生网络分区):</span>
+<span id="cb5-2" class="hljs-ln-code"><a href=""></a>  选 A（可用性） vs C（一致性）</span>
+<span id="cb5-3" class="hljs-ln-code"><a href=""></a><span class="cf">else</span>:</span>
+<span id="cb5-4" class="hljs-ln-code"><a href=""></a>  选 L（延迟）vs C（一致性）</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>实践中常见：<strong>读延迟</strong>与<strong>可见性（新鲜度）</strong>之间的权衡</li>
+</ul>
+</section>
+<section id="pacelc-定理" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">PACELC 定理</h2>
+<style>
+.pac-wrap { position: relative; width: 680px; height: 400px; margin: 0 auto; }
+.pac-box { position:absolute; width: 160px; height: 70px; border-radius: 10px;
+           display:flex; align-items:center; justify-content:center;
+           font-weight:600; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+.pac-arrow { position:absolute; font-size:1.5rem; font-weight:bold; color:#333; }
+
+/* 节点配色 */
+.nodeP { background:#e83e8c; left: 260px; top: 20px; }
+.nodeA { background:#3fb618; left: 60px;  top: 120px; }
+.nodeC1 { background:#2780e3; left: 460px; top: 120px; }
+.nodeE { background:#ffb400; left: 260px; top: 260px; }
+.nodeL { background:#6f42c1; left: 60px;  top: 360px; }
+.nodeC2 { background:#2780e3; left: 460px; top: 360px; }
+
+/* 高亮样式 */
+.focus { transform:scale(1.1); box-shadow:0 0 10px rgba(0,0,0,.4); z-index:3; }
+.dim   { opacity:.25; }
+</style>
+
+<div class="pac-wrap">
+  <!-- 顶层：分区 -->
+  <div data-id="P" class="pac-box nodeP">P</div>
+
+  <!-- 分区时选择 -->
+  <div data-id="A" class="pac-box nodeA">A</div>
+  <div data-id="C1" class="pac-box nodeC1">C</div>
+  <div class="pac-arrow" style="left:210px; top:70px;">↙</div>
+  <div class="pac-arrow" style="left:430px; top:70px;">↘</div>
+
+  <!-- 否则 Else -->
+  <div data-id="E" class="pac-box nodeE">E</div>
+
+  <!-- Else 时选择 -->
+  <div data-id="L" class="pac-box nodeL">L</div>
+  <div data-id="C2" class="pac-box nodeC2">C</div>
+  <div class="pac-arrow" style="left:210px; top:310px;">↙</div>
+  <div class="pac-arrow" style="left:430px; top:310px;">↘</div>
+</div>
+</section>
+<section id="pacelc分区-p" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">PACELC：分区 (P)</h2>
+<div class="pac-wrap">
+  <div data-id="P" class="pac-box nodeP focus">P</div>
+  <div data-id="A" class="pac-box nodeA">A</div>
+  <div data-id="C1" class="pac-box nodeC1">C</div>
+  <div data-id="E" class="pac-box nodeE dim">E</div>
+  <div data-id="L" class="pac-box nodeL dim">L</div>
+  <div data-id="C2" class="pac-box nodeC2 dim">C</div>
+</div>
+</section>
+<section id="pacelc否则-e" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">PACELC：否则 (E)</h2>
+<div class="pac-wrap">
+  <div data-id="P" class="pac-box nodeP dim">P</div>
+  <div data-id="A" class="pac-box nodeA dim">A</div>
+  <div data-id="C1" class="pac-box nodeC1 dim">C</div>
+  <div data-id="E" class="pac-box nodeE focus">E</div>
+  <div data-id="L" class="pac-box nodeL">L</div>
+  <div data-id="C2" class="pac-box nodeC2">C</div>
+</div>
+</section>
+<section id="pacelc-定理小结" class="slide level2" data-auto-animate="true" data-auto-animate-easing="ease-in-out">
+<h2 data-id="quarto-animate-title">PACELC 定理小结</h2>
+<ul>
+<li><strong>CAP</strong>：分区时只能在一致性 (C) 和可用性 (A) 之间二选一</li>
+<li><strong>PACELC</strong>：即使没有分区，系统仍要在<strong>延迟 (L)</strong> 与 <strong>一致性 (C)</strong> 之间权衡</li>
+</ul>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p>CAP 只考虑出故障时的取舍；PACELC 还提醒平时正常时也要二选一</p>
+</div>
+</div>
+</div>
+</section>
+<section id="关于分布式系统的观点" class="slide level2">
+<h2>关于分布式系统的观点</h2>
+<div class="columns">
+<div class="column fragment" style="width:50%;">
+<ul>
+<li>网络是可靠的</li>
+<li>延迟是零</li>
+<li>带宽是无限的</li>
+<li>网络是安全的</li>
+<li>拓扑不会改变</li>
+<li>只有一个管理员</li>
+<li>传输成本是零</li>
+<li>网络是同构的</li>
+</ul>
+</div><div class="column fragment" style="width:50%;">
+<ul>
+<li>错：网络会丢包、延迟</li>
+<li>错：光速也需要时间</li>
+<li>错：带宽很贵</li>
+<li>错：需要加密</li>
+<li>错：节点会增减</li>
+<li>错：多团队协作</li>
+<li>错：序列化有开销</li>
+<li>错：异构是常态</li>
+</ul>
+</div></div>
+</section>
+<section id="设计四原则" class="slide level2">
+<h2>设计四原则</h2>
+<ol type="1">
+<li>故障是常态（容错先行）</li>
+<li>保持简单（优先采用经过验证的原语，如 Raft）</li>
+<li>优先避开跨分片事务（以分片键设计降低冲突域）</li>
+<li>可观测性至上（可追踪、可解释、可回放）</li>
+</ol>
+</section></section>
+<section>
+<section id="如何学这门课" class="title-slide slide level1 center">
+<h1>如何学这门课</h1>
+
+</section>
+<section id="理论-实践的迭代闭环" class="slide level2">
+<h2>理论 ↔︎ 实践的迭代闭环</h2>
+<ul>
+<li>理论：问题本质 → 经典算法 → 正确性证明 → 复杂度</li>
+<li>实践：跑系统 → 注入故障 → 实现最简版 → 读真实代码</li>
+<li>迭代：在“实现—验证—反思”中建立直觉</li>
+</ul>
+</section>
+<section id="实验环境建议" class="slide level2">
+<h2>实验环境建议</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href=""></a><span class="co"># Docker（必需）</span></span>
+<span id="cb6-2"><a href=""></a><span class="ex">docker</span> <span class="at">--version</span></span>
+<span id="cb6-3"><a href=""></a></span>
+<span id="cb6-4"><a href=""></a><span class="co"># TiDB Playground（分布式SQL，按需在实验课使用）</span></span>
+<span id="cb6-5"><a href=""></a><span class="ex">tiup</span> playground</span>
+<span id="cb6-6"><a href=""></a></span>
+<span id="cb6-7"><a href=""></a><span class="co"># etcd（共识/配置示例用）</span></span>
+<span id="cb6-8"><a href=""></a><span class="ex">docker</span> run <span class="at">-d</span> <span class="at">--name</span> etcd <span class="at">-p</span> 2379:2379 <span class="at">-p</span> 2380:2380 quay.io/coreos/etcd:latest</span>
+<span id="cb6-9"><a href=""></a></span>
+<span id="cb6-10"><a href=""></a><span class="co"># Python 工具箱（采集/测试/绘图）</span></span>
+<span id="cb6-11"><a href=""></a><span class="ex">python3</span> <span class="at">-m</span> venv venv <span class="kw">&amp;&amp;</span> <span class="bu">source</span> venv/bin/activate</span>
+<span id="cb6-12"><a href=""></a><span class="ex">pip</span> install requests asyncio numpy</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>提示</strong></p>
+</div>
+<div class="callout-content">
+<p>为兼容 Windows 系统，我们选择<strong>容器优先</strong></p>
+</div>
+</div>
+</div>
+</section>
+<section id="推荐学习路径" class="slide level2">
+<h2>推荐学习路径</h2>
+<ol type="1">
+<li>快速通读（建立地标）</li>
+<li>深入理解（推导/证明 + 编程作业）</li>
+<li>拓展研究（论文/实现/优化）</li>
+</ol>
+</section></section>
+<section>
+<section id="工具与生态" class="title-slide slide level1 center">
+<h1>工具与生态</h1>
+
+</section>
+<section id="主流系统图谱" class="slide level2">
+<h2>主流系统图谱</h2>
+<ul>
+<li>分布式 SQL：TiDB（MySQL 兼容，HTAP）、CockroachDB（PG 兼容，全球部署）、YugabyteDB、VoltDB（内存）</li>
+<li>NoSQL：Cassandra（AP 倾向）、MongoDB（可配置权衡）、HBase（CP 倾向）、DynamoDB（托管）</li>
+<li>云原生：Aurora（存算分离）、Spanner（全球一致）、CosmosDB（多模型）、PolarDB 等</li>
+</ul>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>术语澄清</strong>：MongoDB、Cassandra、HBase 的 “CP/AP” 归类与<strong>具体读写策略/故障情形</strong>相关，切勿过度简化为静态标签。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="测试与验证工具" class="slide level2">
+<h2>测试与验证工具</h2>
+<ul>
+<li>正确性：Jepsen、Elle、Maelstrom</li>
+<li>性能：YCSB、TPC-C、sysbench</li>
+<li>混沌：Chaos Monkey、Pumba、Litmus</li>
+</ul>
+</section></section>
+<section>
+<section id="学科前沿与趋势" class="title-slide slide level1 center">
+<h1>学科前沿与趋势</h1>
+
+</section>
+<section id="研究热点" class="slide level2">
+<h2>研究热点</h2>
+<ul>
+<li><strong>HTAP</strong>（行列混合/副本隔离/新鲜度）</li>
+<li><strong>Serverless/存算分离</strong>（按需计费/弹性/冷启动）</li>
+<li><strong>AI 驱动运维/优化</strong>（索引推荐/代价估计/异常诊断）</li>
+<li><strong>可验证数据库</strong>（仿真、形式化、模型检查）</li>
+<li><strong>专业化数据库</strong>（时序/图/向量）</li>
+</ul>
+</section>
+<section id="未来-5-年" class="slide level2">
+<h2>未来 5 年？</h2>
+<ol type="1">
+<li>智能化：优化器与自适应调优</li>
+<li>边缘化：端-边-云数据库协同</li>
+<li>专业化：向量/时序/图的工程化</li>
+<li>标准化：跨云与数据主权的标准推进</li>
+</ol>
+</section></section>
+<section>
+<section id="课程安排与考核" class="title-slide slide level1 center">
+<h1>课程安排与考核</h1>
+
+</section>
+<section id="学习建议" class="slide level2">
+<h2>学习建议</h2>
+<p><strong>Before → In → After</strong></p>
+<ul>
+<li class="fragment">课前：预习讲义、跑通脚手架、带问题来</li>
+<li class="fragment">课堂：抓住因果链，不纠结实现枝节</li>
+<li class="fragment">课后：作业与快评卡，按“证据—结论”写作</li>
+</ul>
+</section>
+<section id="成绩构成" class="slide level2">
+<h2>成绩构成</h2>
+<ul>
+<li>平时作业：20%（巩固知识点）</li>
+<li>平时实验：30% (阶段性实践)</li>
+<li>期中测试：20%（以获取PCTA证书为准）</li>
+<li>期末项目：30%
+<ul>
+<li>开发类：基于分布式数据库设计并实现一个应用程序（落地场景）</li>
+<li>分析类：用所学知识分析市面上的分布式系统</li>
+<li>研究类：创造性地提出新方案或新模式并且动手做验证</li>
+</ul></li>
+</ul>
+</section>
+<section id="学习资源" class="slide level2">
+<h2>学习资源</h2>
+<ul>
+<li>书籍：<a href="https://dataintensive.net/">DDIA</a>、<a href="https://www.databass.dev/">Database Internals</a>、教材等</li>
+<li>课程：<a href="https://pdos.csail.mit.edu/6.824/">MIT 6.824</a>、<a href="https://15445.courses.cs.cmu.edu/">CMU 15-445</a>、<a href="https://canvas.stanford.edu/courses/146728">Stanford CS245</a>等</li>
+<li>论文：<a href="https://static.googleusercontent.com/media/research.google.com/en//archive/spanner-osdi2012.pdf">Spanner</a>（外部一致性）、<a href="https://cs.yale.edu/homes/thomson/publications/calvin-sigmod12.pdf">Calvin</a>（确定性）、<a href="https://raft.github.io/raft.pdf">Raft</a>（共识）、<a href="https://pages.cs.wisc.edu/~yxy/cs764-f20/papers/aurora-sigmod-17.pdf">Aurora</a>（云原生）、<a href="https://www.foundationdb.org/files/fdb-paper.pdf">FoundationDB</a>（解耦与仿真）等</li>
+<li>社区：<a href="https://cn.pingcap.com/courses-catalog/">TiDB</a>等</li>
+</ul>
+</section></section>
+<section>
+<section id="动手练感受分布式" class="title-slide slide level1 center">
+<h1>动手练：感受分布式</h1>
+
+</section>
+<section id="分布式计数器简化版" class="slide level2 smaller">
+<h2>分布式计数器简化版</h2>
+<blockquote>
+<p>理解在“延迟/丢包/异步复制”条件下，即使是最简单的计数也会变得复杂</p>
+</blockquote>
+<div class="sourceCode" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href=""></a><span class="co">#!/usr/bin/env python3</span></span>
+<span id="cb7-2"><a href=""></a><span class="co">"""</span></span>
+<span id="cb7-3"><a href=""></a><span class="co">实验：模拟分布式计数器</span></span>
+<span id="cb7-4"><a href=""></a><span class="co">目标：通过对比，理解分布式环境下操作的复杂性、常见问题及解决方案。</span></span>
+<span id="cb7-5"><a href=""></a><span class="co">"""</span></span>
+<span id="cb7-6"><a href=""></a></span>
+<span id="cb7-7"><a href=""></a><span class="im">import</span> threading</span>
+<span id="cb7-8"><a href=""></a><span class="im">import</span> time</span>
+<span id="cb7-9"><a href=""></a><span class="im">import</span> random</span>
+<span id="cb7-10"><a href=""></a><span class="im">import</span> logging</span>
+<span id="cb7-11"><a href=""></a></span>
+<span id="cb7-12"><a href=""></a><span class="co"># 配置日志，方便观察并发执行过程</span></span>
+<span id="cb7-13"><a href=""></a>logging.basicConfig(</span>
+<span id="cb7-14"><a href=""></a>    level<span class="op">=</span>logging.INFO,</span>
+<span id="cb7-15"><a href=""></a>    <span class="bu">format</span><span class="op">=</span><span class="st">"(</span><span class="sc">%(threadName)-10s</span><span class="st">) </span><span class="sc">%(message)s</span><span class="st">"</span>,</span>
+<span id="cb7-16"><a href=""></a>)</span>
+<span id="cb7-17"><a href=""></a></span>
+<span id="cb7-18"><a href=""></a></span>
+<span id="cb7-19"><a href=""></a><span class="kw">class</span> DistributedCounter:</span>
+<span id="cb7-20"><a href=""></a>    <span class="co">"""分布式计数器模拟"""</span></span>
+<span id="cb7-21"><a href=""></a></span>
+<span id="cb7-22"><a href=""></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, nodes<span class="op">=</span><span class="dv">3</span>, method<span class="op">=</span><span class="st">"operation"</span>):</span>
+<span id="cb7-23"><a href=""></a>        <span class="va">self</span>.nodes <span class="op">=</span> [<span class="dv">0</span>] <span class="op">*</span> nodes</span>
+<span id="cb7-24"><a href=""></a>        <span class="co"># 这个锁是Python多线程编程中为了保护 self.nodes 列表线程安全的“本地锁”。</span></span>
+<span id="cb7-25"><a href=""></a>        <span class="co"># 它绝不代表一个“分布式锁”。在真实的分布式系统中，没有这种跨所有节点的共享内存和全局锁。</span></span>
+<span id="cb7-26"><a href=""></a>        <span class="va">self</span>.lock <span class="op">=</span> threading.Lock()</span>
+<span id="cb7-27"><a href=""></a>        <span class="va">self</span>.network_delay <span class="op">=</span> (<span class="fl">0.01</span>, <span class="fl">0.05</span>)  <span class="co"># 模拟网络延迟范围</span></span>
+<span id="cb7-28"><a href=""></a>        <span class="va">self</span>.failure_rate <span class="op">=</span> <span class="fl">0.1</span>  <span class="co"># 模拟网络或节点故障的概率</span></span>
+<span id="cb7-29"><a href=""></a>        <span class="va">self</span>.replicate_method <span class="op">=</span> method</span>
+<span id="cb7-30"><a href=""></a></span>
+<span id="cb7-31"><a href=""></a>    <span class="kw">def</span> _simulate_network(<span class="va">self</span>, operation_name, from_node, to_node<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb7-32"><a href=""></a>        <span class="co">"""模拟网络延迟和故障，并打印日志"""</span></span>
+<span id="cb7-33"><a href=""></a>        time.sleep(random.uniform(<span class="op">*</span><span class="va">self</span>.network_delay))</span>
+<span id="cb7-34"><a href=""></a>        <span class="cf">if</span> random.random() <span class="op">&lt;</span> <span class="va">self</span>.failure_rate:</span>
+<span id="cb7-35"><a href=""></a>            <span class="cf">if</span> to_node <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb7-36"><a href=""></a>                logging.warning(</span>
+<span id="cb7-37"><a href=""></a>                    <span class="ss">f"网络故障: 节点 </span><span class="sc">{</span>from_node<span class="sc">}</span><span class="ss"> -&gt; 节点 </span><span class="sc">{</span>to_node<span class="sc">}</span><span class="ss"> 的 </span><span class="sc">{</span>operation_name<span class="sc">}</span><span class="ss"> 失败!"</span></span>
+<span id="cb7-38"><a href=""></a>                )</span>
+<span id="cb7-39"><a href=""></a>            <span class="cf">else</span>:</span>
+<span id="cb7-40"><a href=""></a>                logging.warning(<span class="ss">f"网络故障: 节点 </span><span class="sc">{</span>from_node<span class="sc">}</span><span class="ss"> 的 </span><span class="sc">{</span>operation_name<span class="sc">}</span><span class="ss"> 失败!"</span>)</span>
+<span id="cb7-41"><a href=""></a>            <span class="cf">return</span> <span class="va">False</span></span>
+<span id="cb7-42"><a href=""></a>        <span class="cf">return</span> <span class="va">True</span></span>
+<span id="cb7-43"><a href=""></a></span>
+<span id="cb7-44"><a href=""></a>    <span class="kw">def</span> increment(<span class="va">self</span>, node_id):</span>
+<span id="cb7-45"><a href=""></a>        <span class="co">"""</span></span>
+<span id="cb7-46"><a href=""></a><span class="co">        一个外部请求到达某个节点，使其计数器加一。</span></span>
+<span id="cb7-47"><a href=""></a><span class="co">        分为两步：</span></span>
+<span id="cb7-48"><a href=""></a><span class="co">        1. 本地增加计数。</span></span>
+<span id="cb7-49"><a href=""></a><span class="co">        2. 将变更“异步”地复制到其他节点。</span></span>
+<span id="cb7-50"><a href=""></a><span class="co">        """</span></span>
+<span id="cb7-51"><a href=""></a>        logging.info(<span class="ss">f"节点 </span><span class="sc">{</span>node_id<span class="sc">}</span><span class="ss"> 收到 increment 请求。"</span>)</span>
+<span id="cb7-52"><a href=""></a></span>
+<span id="cb7-53"><a href=""></a>        <span class="co"># 1. 本地自增 (原子操作)</span></span>
+<span id="cb7-54"><a href=""></a>        <span class="cf">with</span> <span class="va">self</span>.lock:</span>
+<span id="cb7-55"><a href=""></a>            initial_value <span class="op">=</span> <span class="va">self</span>.nodes[node_id]</span>
+<span id="cb7-56"><a href=""></a>            <span class="va">self</span>.nodes[node_id] <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb7-57"><a href=""></a>            logging.info(</span>
+<span id="cb7-58"><a href=""></a>                <span class="ss">f"节点 </span><span class="sc">{</span>node_id<span class="sc">}</span><span class="ss"> 本地计数: </span><span class="sc">{</span>initial_value<span class="sc">}</span><span class="ss"> -&gt; </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>nodes[node_id]<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb7-59"><a href=""></a>            )</span>
+<span id="cb7-60"><a href=""></a></span>
+<span id="cb7-61"><a href=""></a>        <span class="co"># 2. 将变更异步复制到其他节点</span></span>
+<span id="cb7-62"><a href=""></a>        <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(<span class="va">self</span>.nodes)):</span>
+<span id="cb7-63"><a href=""></a>            <span class="cf">if</span> i <span class="op">!=</span> node_id:</span>
+<span id="cb7-64"><a href=""></a>                <span class="co"># 使用下面的两种同步方法之一</span></span>
+<span id="cb7-65"><a href=""></a>                <span class="cf">if</span> <span class="va">self</span>.replicate_method <span class="op">==</span> <span class="st">"state"</span>:</span>
+<span id="cb7-66"><a href=""></a>                    method <span class="op">=</span> <span class="va">self</span>.replicate_state</span>
+<span id="cb7-67"><a href=""></a>                <span class="cf">else</span>:</span>
+<span id="cb7-68"><a href=""></a>                    method <span class="op">=</span> <span class="va">self</span>.replicate_operation</span>
+<span id="cb7-69"><a href=""></a></span>
+<span id="cb7-70"><a href=""></a>                threading.Thread(</span>
+<span id="cb7-71"><a href=""></a>                    target<span class="op">=</span>method, args<span class="op">=</span>(node_id, i), name<span class="op">=</span><span class="ss">f"Sync-</span><span class="sc">{</span>node_id<span class="sc">}</span><span class="ss">to</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb7-72"><a href=""></a>                ).start()</span>
+<span id="cb7-73"><a href=""></a></span>
+<span id="cb7-74"><a href=""></a>    <span class="co"># --- 状态复制 ---</span></span>
+<span id="cb7-75"><a href=""></a>    <span class="kw">def</span> replicate_state(<span class="va">self</span>, from_node, to_node):</span>
+<span id="cb7-76"><a href=""></a>        <span class="co">"""</span></span>
+<span id="cb7-77"><a href=""></a><span class="co">        直接用我的值覆盖你的值。</span></span>
+<span id="cb7-78"><a href=""></a><span class="co">        这是导致“更新丢失”问题的根源。</span></span>
+<span id="cb7-79"><a href=""></a><span class="co">        """</span></span>
+<span id="cb7-80"><a href=""></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="va">self</span>._simulate_network(<span class="st">"状态复制"</span>, from_node, to_node):</span>
+<span id="cb7-81"><a href=""></a>            <span class="cf">return</span></span>
+<span id="cb7-82"><a href=""></a></span>
+<span id="cb7-83"><a href=""></a>        <span class="cf">with</span> <span class="va">self</span>.lock:</span>
+<span id="cb7-84"><a href=""></a>            val_from <span class="op">=</span> <span class="va">self</span>.nodes[from_node]</span>
+<span id="cb7-85"><a href=""></a>            val_to_before <span class="op">=</span> <span class="va">self</span>.nodes[to_node]</span>
+<span id="cb7-86"><a href=""></a>            <span class="co"># 无论对方的值是多少，都强制用我的值覆盖</span></span>
+<span id="cb7-87"><a href=""></a>            <span class="va">self</span>.nodes[to_node] <span class="op">=</span> val_from</span>
+<span id="cb7-88"><a href=""></a>            logging.info(</span>
+<span id="cb7-89"><a href=""></a>                <span class="ss">f"状态复制: 节点 </span><span class="sc">{</span>from_node<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>val_from<span class="sc">}</span><span class="ss">) -&gt; 节点 </span><span class="sc">{</span>to_node<span class="sc">}</span><span class="ss"> (</span><span class="sc">{</span>val_to_before<span class="sc">}</span><span class="ss">)，更新后节点 </span><span class="sc">{</span>to_node<span class="sc">}</span><span class="ss"> 值为 </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>nodes[to_node]<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb7-90"><a href=""></a>            )</span>
+<span id="cb7-91"><a href=""></a></span>
+<span id="cb7-92"><a href=""></a>    <span class="co"># --- 操作复制 ---</span></span>
+<span id="cb7-93"><a href=""></a>    <span class="kw">def</span> replicate_operation(<span class="va">self</span>, from_node, to_node):</span>
+<span id="cb7-94"><a href=""></a>        <span class="co">"""</span></span>
+<span id="cb7-95"><a href=""></a><span class="co">        告诉其他节点“我做了一次加一操作”而非“我的新值是X”。</span></span>
+<span id="cb7-96"><a href=""></a><span class="co">        可以避免更新丢失问题。</span></span>
+<span id="cb7-97"><a href=""></a><span class="co">        """</span></span>
+<span id="cb7-98"><a href=""></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="va">self</span>._simulate_network(<span class="st">"操作复制"</span>, from_node, to_node):</span>
+<span id="cb7-99"><a href=""></a>            <span class="cf">return</span></span>
+<span id="cb7-100"><a href=""></a></span>
+<span id="cb7-101"><a href=""></a>        <span class="cf">with</span> <span class="va">self</span>.lock:</span>
+<span id="cb7-102"><a href=""></a>            val_to_before <span class="op">=</span> <span class="va">self</span>.nodes[to_node]</span>
+<span id="cb7-103"><a href=""></a>            <span class="co"># 将“加一”这个操作在另一个节点上重放</span></span>
+<span id="cb7-104"><a href=""></a>            <span class="va">self</span>.nodes[to_node] <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb7-105"><a href=""></a>            logging.info(</span>
+<span id="cb7-106"><a href=""></a>                <span class="ss">f"操作复制: 节点 </span><span class="sc">{</span>from_node<span class="sc">}</span><span class="ss"> 通知 节点 </span><span class="sc">{</span>to_node<span class="sc">}</span><span class="ss"> 执行 increment。节点 </span><span class="sc">{</span>to_node<span class="sc">}</span><span class="ss"> 计数: </span><span class="sc">{</span>val_to_before<span class="sc">}</span><span class="ss"> -&gt; </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>nodes[to_node]<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb7-107"><a href=""></a>            )</span>
+<span id="cb7-108"><a href=""></a></span>
+<span id="cb7-109"><a href=""></a>    <span class="kw">def</span> get_nodes_state(<span class="va">self</span>):</span>
+<span id="cb7-110"><a href=""></a>        <span class="co">"""获取所有节点当前的状态"""</span></span>
+<span id="cb7-111"><a href=""></a>        <span class="cf">with</span> <span class="va">self</span>.lock:</span>
+<span id="cb7-112"><a href=""></a>            <span class="cf">return</span> <span class="bu">list</span>(<span class="va">self</span>.nodes)</span>
+<span id="cb7-113"><a href=""></a></span>
+<span id="cb7-114"><a href=""></a></span>
+<span id="cb7-115"><a href=""></a><span class="co"># --- 演示场景 ---</span></span>
+<span id="cb7-116"><a href=""></a></span>
+<span id="cb7-117"><a href=""></a></span>
+<span id="cb7-118"><a href=""></a><span class="kw">def</span> demo(requests<span class="op">=</span><span class="dv">20</span>, nodes<span class="op">=</span><span class="dv">3</span>, replicate_method<span class="op">=</span><span class="st">"operation"</span>):</span>
+<span id="cb7-119"><a href=""></a>    <span class="co">"""演示1: 数据不一致性 和 最终一致性"""</span></span>
+<span id="cb7-120"><a href=""></a>    <span class="bu">print</span>(<span class="st">"展示在并发更新下，不同节点的数据会短暂不一致，但最终会趋于一致。"</span>)</span>
+<span id="cb7-121"><a href=""></a></span>
+<span id="cb7-122"><a href=""></a>    counter <span class="op">=</span> DistributedCounter(nodes, method<span class="op">=</span>replicate_method)</span>
+<span id="cb7-123"><a href=""></a>    <span class="co"># 演示刻意只让一个节点接收请求，以简化复制过程，突出不一致性</span></span>
+<span id="cb7-124"><a href=""></a>    threads <span class="op">=</span> []</span>
+<span id="cb7-125"><a href=""></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(requests):</span>
+<span id="cb7-126"><a href=""></a>        t <span class="op">=</span> threading.Thread(target<span class="op">=</span>counter.increment, args<span class="op">=</span>(<span class="dv">0</span>,), name<span class="op">=</span><span class="ss">f"Request-</span><span class="sc">{</span>_<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-127"><a href=""></a>        threads.append(t)</span>
+<span id="cb7-128"><a href=""></a>        t.start()</span>
+<span id="cb7-129"><a href=""></a></span>
+<span id="cb7-130"><a href=""></a>    <span class="co"># 在操作过程中，多次查看状态，观察不一致</span></span>
+<span id="cb7-131"><a href=""></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">3</span>):</span>
+<span id="cb7-132"><a href=""></a>        time.sleep(<span class="fl">0.1</span>)</span>
+<span id="cb7-133"><a href=""></a>        <span class="bu">print</span>(<span class="ss">f"中间状态 </span><span class="sc">{</span>i <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>counter<span class="sc">.</span>get_nodes_state()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-134"><a href=""></a></span>
+<span id="cb7-135"><a href=""></a>    <span class="cf">for</span> t <span class="kw">in</span> threads:</span>
+<span id="cb7-136"><a href=""></a>        t.join()</span>
+<span id="cb7-137"><a href=""></a></span>
+<span id="cb7-138"><a href=""></a>    <span class="co"># 等待所有异步的同步线程完成</span></span>
+<span id="cb7-139"><a href=""></a>    time.sleep(<span class="fl">0.5</span>)</span>
+<span id="cb7-140"><a href=""></a>    <span class="bu">print</span>(<span class="ss">f"预期结果: 所有节点值都为 </span><span class="sc">{</span>requests<span class="sc">}</span><span class="ss"> (如果网络没有故障)"</span>)</span>
+<span id="cb7-141"><a href=""></a>    <span class="bu">print</span>(<span class="ss">f"最终状态: </span><span class="sc">{</span>counter<span class="sc">.</span>get_nodes_state()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-142"><a href=""></a></span>
+<span id="cb7-143"><a href=""></a></span>
+<span id="cb7-144"><a href=""></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
+<span id="cb7-145"><a href=""></a>    demo(replicate_method<span class="op">=</span><span class="st">"state"</span>)</span>
+<span id="cb7-146"><a href=""></a>    <span class="bu">print</span>(<span class="st">"结束演示"</span>)</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="结果与反思" class="slide level2">
+<h2>结果与反思</h2>
+<ul>
+<li>立即读：各节点值不同；与“预期总和”不符</li>
+<li>稍后读：趋于一致（但正确性无保障）</li>
+<li><strong>讨论</strong>：
+<ul>
+<li>并发写如何避免丢失？</li>
+<li>如何定义“线性一致/可串行化/最终一致”？</li>
+<li>我们需要哪些原语：
+<ul>
+<li><strong>日志复制、投票、多数派提交、MVCC</strong>……</li>
+</ul></li>
+</ul></li>
+</ul>
+</section></section>
+<section>
+<section id="总结-预告" class="title-slide slide level1 center">
+<h1>总结 &amp; 预告</h1>
+
+</section>
+<section id="本讲要点" class="slide level2">
+<h2>本讲要点</h2>
+<ol type="1">
+<li>分布式是必然；工程是权衡</li>
+<li>用“<strong>时间与日志</strong>”这根线索贯穿课程</li>
+<li>不要相信，要验证</li>
+</ol>
+</section>
+<section id="学习心态论" class="slide level2">
+<h2>学习心态论</h2>
+<ul>
+<li>保持好奇：每个设计都有其道理</li>
+<li>勇于质疑：为什么非此不可？</li>
+<li>动手实践：“纸上得来终觉浅”</li>
+<li>系统思考：局部最优≠全局最优</li>
+</ul>
+</section>
+<section id="下节预告" class="slide level2">
+<h2>下节预告</h2>
+<p>分布式时间观与“日志”总线</p>
+<ul>
+<li>没有全局时钟如何定义先后？</li>
+<li>日志如何把“异步世界”转成“确定序列”？</li>
+<li>Lamport/向量时钟、WAL的角色与边界</li>
+</ul>
+</section></section>
+<section id="欢迎交流" class="title-slide slide level1 center">
+<h1>欢迎交流</h1>
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="slide01_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="slide01_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/reveal-chalkboard/plugin.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="slide01_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="slide01_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': true,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleChalkboard(event)\"><kbd>b</kbd> Toggle Chalkboard</a></li>\n<li class=\"slide-tool-item\" data-item=\"6\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleNotesCanvas(event)\"><kbd>c</kbd> Toggle Notes Canvas</a></li>\n<li class=\"slide-tool-item\" data-item=\"7\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.downloadDrawings(event)\"><kbd>d</kbd> Download Drawings</a></li>\n<li class=\"slide-tool-item\" data-item=\"8\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'chalkboard': {"buttons":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'slide',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1050,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, RevealChalkboard, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "已复制");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "已复制");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>
