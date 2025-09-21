@@ -8,6 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+uv.lock
+.python-version
 
 # macOS
 .DS_Store

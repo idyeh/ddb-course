@@ -1,0 +1,1008 @@
+---
+title: "分布式数据库开发"
+subtitle: "第2讲：复制语义与共识"
+author: "叶鸿"
+date: "2025-09-17"
+lang: zh-CN
+format:
+  revealjs:
+    theme: [default]
+    slide-number: true
+    toc: false
+    overview: true
+    transition: slide
+    code-line-numbers: true
+    preview-links: auto
+    chalkboard: true
+mermaid-format: svg
+---
+
+## 热身场景
+
+* 多节点数据库集群同时接到“从 Alice 账户转 100 元给 Bob”（`transfer(A→B, 100)`）
+  * `A -= 100`
+  * `B += 100`
+* 如果各节点看到的顺序**不一致**，最终余额**对不上**
+
+## 引子：为什么需要共识？ {.smaller}
+
+- 我们希望**多个副本（Replica）**在面对**并发写入、宕机、网络抖动**时，仍对“系统发生了什么”达成**同一个历史叙事**。
+- 两个目标：
+  - **安全性（Safety）**：永不出现“两个不同结果都被当成真”的情况  
+  - **活性（Liveness）**：在故障可容忍范围内，系统最终能前进，别永远卡关
+
+::: callout-note
+类比小组成员一起写论文
+
+- 安全性：不能出现两个最终版本同时投稿  
+- 活性：别因为吵架/人不在而一直没法定稿
+:::
+
+## 本讲导览
+
+- 从**复制语义**出发：复制“状态” VS 复制“操作”
+- 状态机复制（SMR）与**一致性**目标
+- **Raft**：选主、日志复制、安全性
+- **Paxos**：核心相位与与 Raft 的关系
+- 实验演示与课堂练习
+
+# 复制语义：状态 vs 操作
+
+## 复制状态
+
+- 直接把**最终内存/存储状态**打包发给别人
+- 技术：全量/增量同步、**快照复制**
+- 优点：**快**，一次到位；新副本追上进度简单
+- 难点：**差异合并**、冲突解决、频繁更新时的带宽与一致性窗口
+- 风险：需要明确**状态格式/版本**；跨版本回放易出错
+
+## 复制操作
+
+- 广播**操作日志**，各副本按同样顺序、在**确定性状态机**中重放
+- 技术：**状态机复制（State Machine Replication，SMR）**，把写请求作为**日志条目**顺序执行
+- 优点：更**可审计**，可重放、可回溯、**因果顺序清晰**；跨版本演进更平滑
+- 难点：**全体副本**必须对执行顺序达成一致，这就需要**共识协议**
+
+## 一致性模型与复制语义的关系
+
+* **强一致性**（线性一致性）：看起来像一台**单机**按实时**时序**执行
+* **顺序一致性**：保留同一客户端的操作顺序，整体顺序可能不同
+* **最终一致性**：允许节点之间出现暂时的不一致，优先考虑高可用性和低延迟，而非即时数据同步
+
+::: callout-important
+**状态复制**常与较弱一致性搭配；**操作复制 + 共识**指向更强的一致性语义，甚至可达线性一致
+:::
+
+## 一致性模型与状态机复制
+
+状态机复制（SMR）给出实现路线：
+
+1. 用**共识协议**给操作定**总顺序**
+2. 各节点在**同一顺序**下执行，状态保持一致
+
+
+# Paxos
+
+## Paxos {background-image="./assets/paxos_island.jpg" background-opacity="0.1"} 
+
+```{=html}
+<object data="https://lamport.azurewebsites.net/pubs/paxos-simple.pdf" type="application/pdf" width="100%" height="90%">
+    <p>如果没有显示 PDF，莫慌，你可以<a href="https://lamport.azurewebsites.net/pubs/paxos-simple.pdf">点击下载</a>。</p>
+</object>
+```
+
+## Paxos 概览 {.smaller}
+
+* 角色：**Proposer / Acceptor / Learner**
+* 多数派交集保证**唯一性**（安全性）
+* 分两个阶段：
+
+  1. **Prepare / Promise（1a/1b）**：锁定更高提案号，承诺不再接受更低号
+  2. **Accept / Accepted（2a/2b）**：多数 Acceptor 接受某个提，该值被选定接受
+* 多值（日志）用 **Multi-Paxos**：等价于“长期 Leader”不断发提案
+* **Raft ≈ Multi-Paxos 的工程化**：固定 Leader，化繁为简，把多数复杂性放在日志复制与任期机制
+
+## Paxos 概念图示
+
+```{mermaid}
+sequenceDiagram
+  participant P as Proposer
+  participant A1 as Acceptor1
+  participant A2 as Acceptor2
+  participant L as Learner
+  P->>A1: Prepare(n)
+  P->>A2: Prepare(n)
+  A1-->>P: Promise(max seen)
+  A2-->>P: Promise(max seen)
+  P->>A1: Accept(n, value)
+  P->>A2: Accept(n, value)
+  A1-->>L: Accepted(n,value)
+  A2-->>L: Accepted(n,value)
+```
+
+
+# Raft
+
+## Raft 概述
+
+```{=html}
+<object data="https://raft.github.io/raft.pdf" type="application/pdf" width="100%" height="90%">
+    <p>如果没有显示 PDF，莫慌，你可以<a href="https://raft.github.io/raft.pdf">点击下载</a>。</p>
+</object>
+```
+
+## Raft 总览：复杂问题拆开做
+
+- 子问题（规则制定）：
+  1. **选 Leader**：谁当组长，负责统一收作业、发口令？
+  2. **复制日志**：组长如何让大家按**同一顺序**抄过程？
+  3. **保证安全性**：如何避免定稿的作业被推翻或分叉？
+
+## Raft 关键术语 {.smaller}
+
+- **角色**：Follower / Candidate / Leader
+- **Leader** 类似“组长”，统一收发，避免多人同时指挥
+- **Term（任期）**：单调递增的逻辑时钟，一段时间内的第 N 任组长
+- **Log（日志）**：要执行的操作序列，格式 `[(index, term, command), ...]`
+- **AppendEntries** 群发作业进度通知，对齐上次抄到哪一行
+- **prevLogIndex/prevLogTerm**：附带“对齐点”做一致性检查
+- **commitIndex**：已被多数（≥ ⌊N/2⌋+1）确认、可**提交**到状态机的最高日志索引
+- **nextIndex/matchIndex（Leader→每个Follower）**：用来回退/追赶复制进度
+
+## 角色的状态转移 {.smaller}
+
+::: columns
+::: column
+```{mermaid}
+%%| fig-width: 5
+stateDiagram-v2
+    [*] --> Follower
+    Follower --> Candidate: 1
+    Candidate --> Candidate: 2
+    Candidate --> Leader: 3
+    Candidate --> Follower: 4 或 5
+    Leader --> Follower: 4
+```
+:::
+::: column
+各角色主要工作
+
+* **Follower**：被动接收，按 Leader 指令执行
+* **Candidate**：发起拉票
+* **Leader**：发心跳、发日志、推进提交
+
+**状态转移条件**
+
+1. 收到选举超时信号
+2. 选举超时而开始新一轮选举
+3. 获得大多数节点的投票
+4. 发现任期更高Leader
+5. 收到其他Candidate的心跳
+:::
+:::
+
+## 选举触发与随机超时{.smaller}
+
+* 每个 Follower 设置**随机选举超时**（如 150–300ms）
+* 在超时前如果**收到 Leader 心跳**（AppendEntries），就**重置**计时器
+* 超时后变 **Candidate**，`term += 1`，给所有人发 **RequestVote**
+
+::: callout-note
+由随机超时决定**谁先喊我当组长**，减少**同时喊**导致的冲突
+:::
+
+## 投票规则（RequestVote）{.smaller}
+
+* **单任期一票**：`voted_for` 限制
+* **任期比较**：落后任期的请求一律拒绝
+* **日志新鲜度**：候选人的**最后一条日志**必须不比自己旧
+
+  1. 先比**term**
+  2. 若相等再比**index**
+
+::: callout-note
+**只把票投给“作业最完整的同学”**当组长，否则容易带崩全组的对齐进度
+:::
+
+## 日志复制（AppendEntries）{.smaller}
+
+* Leader 携带 `prevLogIndex/prevLogTerm` 与若干 `entries`：
+
+  1. Leader 接到客户端写请求 → 先把命令**追加**（append）到自己的日志
+  2. 向 Follower 发送 `AppendEntries(term, prevLogIndex, prevLogTerm, entries, leaderCommit)`
+
+* Follower 做**一致性检查**：
+
+  1. 如果我在 `prevLogIndex` 的 term 和你发来的**不一致**则产生**冲突**，我**回退**
+  2. 否则才**追加**新条目
+
+* 多数副本**追加成功**则 Leader **提升 `commitIndex`**，再**应用**到状态机，并通知 Follower 提交
+
+::: callout-note
+**对齐参照点**再抄后续步骤。找到大家都确认的“同一行”，从这一行往后统一写
+:::
+
+
+## 日志复制图示
+
+```{mermaid}
+sequenceDiagram
+    participant C as Client
+    participant L as Leader
+    participant F1 as Follower1
+    participant F2 as Follower2
+
+    C->>L: 写请求(cmd)
+    L->>L: 追加日志[term=t, cmd]
+    par 并行复制
+      L->>F1: AppendEntries(prevIdx, prevTerm, [entry], leaderCommit)
+      L->>F2: AppendEntries(prevIdx, prevTerm, [entry], leaderCommit)
+    end
+    F1-->>L: 成功/失败(带回退线索)
+    F2-->>L: 成功
+    L->>L: 收到多数成功 → 提交、应用
+    L-->>C: 成功回执
+```
+
+
+## 日志匹配与 Leader 完全性 {.smaller}
+
+* **日志匹配性质**：两个日志在某索引 `i` 处的 `term` 相同 → 它们在 `i` 及之前完全一致
+* **领导者完全性（Leader Completeness）**：任何已提交的条目**必定**出现在**后续**当选的 Leader 的日志中
+
+::: callout-note
+“抄到第 50 行并被多数同学确认”的内容，下一届组长上任后也必须至少抄到第 50 行，否则他拿不到票
+:::
+
+## 提交规则与“当前任期”定稿 {.smaller}
+
+* Leader 将 `commitIndex` 推进到**某个索引 `N`** 当且仅当：
+
+  1. 有**多数**节点的 `matchIndex ≥ N`，且
+  2. 日志条目**属于当前任期**`log[N].term == currentTerm`
+
+* 这样避免“上一任期的条目**看似**多数复制，但后来被覆盖”的**假提交**。
+
+> 正确做法：先在**当前任期**追加一个“锚点”条目并复制到多数，再**连带**确认之前的条目都安全
+
+::: callout-note
+**本届组长**只对**本届提交**负责；上一届遗留的内容，需要先写出本届新内容并多数确认，再连带前文一起认定为“最终版”
+:::
+
+## 同步复制 vs 异步复制 {.smaller}
+
+| 复制模式 | 确认时机 | 延迟 | 可用性 | 数据丢失窗口 | 典型风险 | 常见场景 |
+|---|---|---|---|---|---|---|
+| **异步（本地 Ack）** | Leader 本地写入日志/存储即返回 | 低 | 高（对慢副本不敏感） | 可能 > 0（Leader 在复制前宕机会丢“已确认”写） | 主从切换后**已确认写丢失** | 跨地域追赶型只读副本、分析副本 |
+| **多数派同步（Quorum）** | **达到多数副本**写入成功再返回 | 中 | 中（≥多数可用） | **≈0（≤f 故障）** | 少数派落后但不影响安全 | 大多数共识系统的**默认** |
+| **全同步** | **全部副本**写入成功再返回 | 高 | 低 | 0 | 容错性差、抖动放大 | 强一致但低吞吐小集群 |
+
+
+## 客户端交互 {.smaller}
+
+* 写请求：
+
+  * 所有写请求**只发 Leader**（把作业交给组长统一记录）
+  * Leader 在**提交后**向客户端回执，保证**线性一致**的可见性
+
+* 读请求：
+
+  * 快速读：基于租约/心跳的新鲜度
+  * **读在心跳后**（严格线性）：Leader 通过心跳或 `ReadIndex` 确保自己仍为多数认可的 Leader
+  * **先写后读**：在读之前提交一个空日志（成本较高）
+
+## 网络分区与脑裂 {.smaller}
+
+* 多数派原则：**只有包含多数的分区**可以继续选出 Leader 并对外服务
+* 少数派：不断超时 → 发起选举 → 得不到多数 → **保持 Follower/Candidate 徘徊**
+* 待到分区恢复后：较小分区通过 **Log Matching** 与当前 Leader **回放对齐**
+
+::: callout-note
+抄作业小组分到两间教室，人数多的那间能继续“有效投票”。合并后，以**多数派定稿**为准，组长带领大家对齐
+:::
+
+## 成员变更 & 快照 {.smaller}
+
+* 成员变更常用**联合共识（Joint Consensus）**两阶段过渡，保证每一步都有**交叠多数**
+* 快照：压缩旧日志（像把“抄到第 500 行”的内容装订成册），从快照点继续
+* 快照复制 = **状态复制**的一种；与日志复制并行互补
+
+
+## 工程取舍 {.smaller}
+
+* Paxos 抽象简洁，但多值/成员变更等**工程化复杂度高**
+* Raft **把工程问题前置入规范**，实现更直接
+
+| 方面  | Raft                | Paxos       |
+| ---- | ------------------- | ----------- |
+| 心智负担 | 低，直观           | 高，抽象   |
+| 领导者  | 强 Leader，职责清晰 | 可无固定 Leader |
+| 日志   | 严格顺序对齐         | 更偏值的选举与传播  |
+| 提交规则 | 当前任期多数更安全 | 需自行处理同等语义  |
+| 成员变更 | 联合共识步骤明确 | 实践复杂，需额外构造  |
+| 工程实现 | 文档 & 开源实现丰富  | 概念简洁，偏学术研究  |
+
+
+## 银行转账案例
+
+设集群有 3节点：Leader **L**、Follower **F1** 和 **F2**。当前 **Term=12**，之前已提交到 **index=41**。  
+
+客户端发起转账操作 `transfer(A→B, 100)` 作为日志条目 **index=42, term=12**。
+
+## Raft 多数派同步
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant L as L (Term 12)
+    participant F1 as F1
+    participant F2 as F2
+
+    C->>L: propose transfer(A→B,100)  # op@42
+    L->>L: log.append(term=12, idx=42, cmd)
+    L->>F1: AppendEntries(prev=41, term=12, [42])
+    L->>F2: AppendEntries(prev=41, term=12, [42])
+
+    F1-->>L: AppendOK(match=42)
+    Note over L: 获得多数复制 (L 自身 + F1)
+
+    L->>L: commitIndex=42 apply(A -= 100 & B += 100)
+    L-->>C: OK(txid=T2025-0917-0001)  # 线性一致确认
+
+    F2-->>L: AppendOK(match=42)  (网络延迟后到达)
+    L->>F2: Heartbeat/CommitNotice(leaderCommit=42)
+    F2->>F2: apply idx=42
+```
+
+## 全同步版本
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant L as L (Term 12)
+    participant F1 as F1
+    participant F2 as F2
+
+    C->>L: propose transfer(A→B,100)  # op@42
+    L->>L: log.append(term=12, idx=42, cmd)
+    L->>F1: AppendEntries(prev=41, term=12, [42])
+    L->>F2: AppendEntries(prev=41, term=12, [42])
+
+    F1-->>L: AppendOK(match=42)
+    Note over L: F1 已就绪，但仍需等待 F2
+
+    alt F2 正常
+        F2-->>L: AppendOK(match=42)
+        L->>L: commitIndex=42 apply(A -= 100 & B += 100)
+        L-->>C: OK(txid=T2025-0917-0001)  # 三副本全同步后才确认
+    else F2 慢/暂时不可用
+        Note over L: 由于 ALL 策略，L 不得向客户端确认
+        Note over C,L: 用户请求阻塞/超时（强一致性的代价）
+    end
+```
+
+
+## 主从异步版本
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant P as P
+    participant R1 as R1
+    participant R2 as R2
+
+    C->>P: propose transfer(A→B,100)  # op@42
+    P->>P: append idx=42 apply(A -= 100 & B += 100)
+    P-->>C: OK(txid=T2025-0917-0002)  # 立即确认（本地成功即返回）
+
+    par 异步复制
+        P->>R1: ShipLog([42]) (async)
+        R1-->>P: Ack(42) (延迟不影响已返回的OK)
+        P->>R2: ShipLog([42]) (async)
+        R2-->>P: Ack(42)
+    end
+
+    alt 故障：P 在复制前或复制中宕机
+        Note right of C: 客户端已拿到 OK，但 R1/R2 可能尚未收到 42
+        Note over R1,R2: 发生主从切换：R1 当选新主，但只到 index=41
+        Note over C,R1: 事务 T2025-0917-0002 丢失（RPO>0）
+    else 无故障
+    end
+```
+
+## 最小 Raft 演示 {.smaller}
+
+
+```python
+"""
+Raft 青春版
+重点：选举、心跳、日志复制（逐条）、多数派提交、简单状态机
+"""
+
+from __future__ import annotations
+from dataclasses import dataclass
+import random
+from typing import List, Dict, Optional, Tuple
+
+# ========= 演示日志开关 =========
+# 总闸
+DEBUG = True
+
+# 分闸
+DBG = {
+    "election": True,  # 选举/角色切换
+    "send_append": False,  # Leader 侧发送 AppendEntries
+    "follower_append": False,  # Follower 侧收到并应答 AppendEntries
+    "append_resp": False,  # Leader 侧收到 APPEND_RESP
+    "apply": True,  # 状态机应用
+}
+
+
+def dlog(cat: str, s: str):
+    """按类目和总开关控制"""
+    if DEBUG and DBG.get(cat, False):
+        print(s, flush=True)
+
+
+# ========= 演示参数 =========
+SEED = 2025
+N = 5  # 节点数（奇数便于产生多数派）
+HEARTBEAT_EVERY = 4  # Leader 心跳间隔（tick）
+ELECTION_RANGE = (12, 20)  # 选举超时范围（tick）
+NET_DELAY_RANGE = (2, 4)  # 消息网络延迟（tick）
+DROP_RATE = 0.0  # 丢包率（例如0.1）
+T_MAX = 220  # 总仿真步数
+
+# 在选出 Leader 后，注入 1 笔转账命令；随后故意整死 Leader 再看重选
+CRASH_LEADER_AT = 120
+RECOVER_LEADER_AT = 170
+
+random.seed(SEED)
+
+
+# ========= Raft 日志条目与消息 =========
+@dataclass
+class Entry:
+    term: int
+    cmd: str  # 例如 "transfer A B 100"
+
+
+# 消息用字典结构
+def msg_request_vote(term, cand_id, last_term, last_idx):
+    return {
+        "type": "RV",
+        "term": term,
+        "cand": cand_id,
+        "last_term": last_term,
+        "last_idx": last_idx,
+    }
+
+
+def msg_request_vote_resp(term, voter_id, granted):
+    return {"type": "RV_RESP", "term": term, "voter": voter_id, "granted": granted}
+
+
+def msg_append(
+    term, leader_id, prev_idx, prev_term, entries: List[Entry], leader_commit
+):
+    # 只发 0/1 条，entries 可序列化
+    return {
+        "type": "APPEND",
+        "term": term,
+        "leader": leader_id,
+        "prev_idx": prev_idx,
+        "prev_term": prev_term,
+        "entries": entries,
+        "leader_commit": leader_commit,
+    }
+
+
+def msg_append_resp(term, from_id, success, match_index):
+    return {
+        "type": "APPEND_RESP",
+        "term": term,
+        "from": from_id,
+        "success": success,
+        "match_index": match_index,
+    }
+
+
+# ========= 网络 =========
+class Network:
+    def __init__(self):
+        self.q: List[Tuple[int, int, dict]] = []  # (deliver_tick, to_id, msg)
+
+    def send(self, now_tick: int, to_id: int, msg: dict):
+        if random.random() < DROP_RATE:
+            return  # 丢包
+        delay = random.randint(*NET_DELAY_RANGE)
+        self.q.append((now_tick + delay, to_id, msg))
+
+    def deliver(self, now_tick: int) -> List[Tuple[int, dict]]:
+        """返回应在 now_tick 投递的消息: [(to_id, msg), ...]"""
+        ready, rest = [], []
+        for t, to_id, msg in self.q:
+            if t <= now_tick:
+                ready.append((to_id, msg))
+            else:
+                rest.append((t, to_id, msg))
+        self.q = rest
+        return ready
+
+
+# ========= Raft 节点 =========
+class Node:
+    def __init__(self, i: int, peers: List[int], net: Network):
+        self.id = i
+        self.peers = peers
+        self.net = net
+
+        # 角色
+        self.state = "Follower"  # Follower / Candidate / Leader
+        self.alive = True
+
+        # 任期与投票
+        self.current_term = 0
+        self.voted_for: Optional[int] = None
+
+        # 日志与提交
+        self.log: List[Entry] = []  # [(term, cmd)]
+        self.commit_index = -1
+        self.last_applied = -1
+
+        # Leader 专用复制状态
+        self.next_index: Dict[int, int] = {}
+        self.match_index: Dict[int, int] = {}
+
+        # 计时
+        self.rand_election_reset(0)
+        self.last_heartbeat_seen = 0
+        self.heartbeat_tick = 0
+
+        # 状态机（银行账户）
+        self.state_machine = {"A": 1000, "B": 1000}
+
+        # 统计
+        self.votes_granted = 0
+
+    # ---- 工具 ----
+    def majority(self) -> int:
+        return len(self.peers) // 2 + 1
+
+    def last_log_index(self) -> int:
+        return len(self.log) - 1
+
+    def last_log_term(self) -> int:
+        return self.log[-1].term if self.log else -1
+
+    def rand_election_reset(self, now_tick: int):
+        self.election_deadline = now_tick + random.randint(*ELECTION_RANGE)
+
+    # ---- 角色切换 ----
+    def become_follower(self, term: int):
+        if self.state != "Follower":
+            print(f"[Tick?] Node{self.id}: -> Follower (term={term})")
+        self.state = "Follower"
+        self.current_term = term
+        self.voted_for = None
+
+    def become_candidate(self, now_tick: int):
+        self.state = "Candidate"
+        self.current_term += 1
+        self.voted_for = self.id
+        self.votes_granted = 1  # 自投一票
+        self.rand_election_reset(now_tick)
+        print(f"[{now_tick}] Node{self.id}: -> Candidate term={self.current_term}")
+        # 广播 RequestVote
+        for peer in self.peers:
+            if peer == self.id:
+                continue
+            self.net.send(
+                now_tick,
+                peer,
+                msg_request_vote(
+                    self.current_term,
+                    self.id,
+                    self.last_log_term(),
+                    self.last_log_index(),
+                ),
+            )
+
+    def become_leader(self, now_tick: int):
+        self.state = "Leader"
+        # 初始化复制指针
+        last = self.last_log_index() + 1
+        self.next_index = {p: last for p in self.peers}
+        self.match_index = {p: -1 for p in self.peers}
+        self.heartbeat_tick = now_tick
+        dlog(
+            "election",
+            f"[{now_tick}] Node{self.id}: ⭐ LEADER elected (term={self.current_term})",
+        )
+        # 立刻发一轮心跳（空 Append）
+        self.send_heartbeats(now_tick)
+
+    # ---- Tick 驱动 ----
+    def tick(self, now_tick: int):
+        if not self.alive:
+            return
+
+        # 选举超时
+        if self.state != "Leader" and now_tick >= self.election_deadline:
+            self.become_candidate(now_tick)
+
+        # Leader 发心跳 / 推进复制
+        if self.state == "Leader" and now_tick - self.heartbeat_tick >= HEARTBEAT_EVERY:
+            self.send_heartbeats(now_tick)
+            self.heartbeat_tick = now_tick
+
+        # 应用提交到状态机
+        self.apply_commits(now_tick)
+
+    # ---- 消息处理 ----
+    def on_msg(self, now_tick: int, msg: dict):
+        if not self.alive:
+            return
+
+        t = msg["term"]
+        # 任期落后要追
+        if t > self.current_term:
+            self.become_follower(t)
+
+        if msg["type"] == "RV":
+            self.handle_request_vote(now_tick, msg)
+        elif msg["type"] == "RV_RESP":
+            if self.state == "Candidate" and t == self.current_term and msg["granted"]:
+                self.votes_granted += 1
+                if self.votes_granted >= self.majority():
+                    self.become_leader(now_tick)
+        elif msg["type"] == "APPEND":
+            self.handle_append(now_tick, msg)
+        elif msg["type"] == "APPEND_RESP":
+            if self.state == "Leader" and t == self.current_term:
+                self.handle_append_resp(now_tick, msg)
+
+    # ---- RequestVote ----
+    def handle_request_vote(self, now_tick: int, m: dict):
+        cand_term = m["term"]
+        cand = m["cand"]
+        cand_last_term, cand_last_idx = m["last_term"], m["last_idx"]
+
+        grant = False
+        if cand_term < self.current_term:
+            grant = False
+        else:
+            # 日志新鲜度：先比 term，再比 idx
+            my_last_term, my_last_idx = self.last_log_term(), self.last_log_index()
+            up_to_date = (cand_last_term > my_last_term) or (
+                cand_last_term == my_last_term and cand_last_idx >= my_last_idx
+            )
+            free_or_same = self.voted_for in (None, cand)
+            if up_to_date and free_or_same:
+                self.voted_for = cand
+                self.rand_election_reset(now_tick)
+                grant = True
+                # 若原本是 Candidate，成为 Follower
+                if self.state != "Follower":
+                    self.become_follower(cand_term)
+        self.net.send(
+            now_tick, cand, msg_request_vote_resp(self.current_term, self.id, grant)
+        )
+
+    # ---- AppendEntries ----
+    def handle_append(self, now_tick: int, m: dict):
+        leader_term = m["term"]
+        leader_id = m["leader"]
+        prev_idx, prev_term = m["prev_idx"], m["prev_term"]
+        entries: List[Entry] = m["entries"]
+        leader_commit = m["leader_commit"]
+
+        # 心跳：看到 Leader 活着
+        self.rand_election_reset(now_tick)
+        if leader_term < self.current_term:
+            dlog(
+                "follower_append",
+                f"[{now_tick}] Node{self.id}: REJECT APPEND from Leader{leader_id} "
+                f"(term back {leader_term} < {self.current_term})",
+            )
+            self.net.send(
+                now_tick,
+                leader_id,
+                msg_append_resp(
+                    self.current_term, self.id, False, self.last_log_index()
+                ),
+            )
+            return
+
+        # Log Matching 检查
+        if prev_idx >= 0:
+            if prev_idx > self.last_log_index() or self.log[prev_idx].term != prev_term:
+                # 不匹配：让 Leader 回退
+                dlog(
+                    "follower_append",
+                    f"[{now_tick}] Node{self.id}: APPEND NACK (too short: have_last={self.last_log_index()}, "
+                    f"need_prev={prev_idx})",
+                )
+                self.net.send(
+                    now_tick,
+                    leader_id,
+                    msg_append_resp(
+                        self.current_term, self.id, False, self.last_log_index()
+                    ),
+                )
+                return
+            if self.log[prev_idx].term != prev_term:
+                # term 不匹配：要求回退
+                dlog(
+                    "follower_append",
+                    f"[{now_tick}] Node{self.id}: APPEND NACK (term-mismatch at {prev_idx}: "
+                    f"local={self.log[prev_idx].term} != prev_term={prev_term})",
+                )
+                self.net.send(
+                    now_tick,
+                    leader_id,
+                    msg_append_resp(
+                        self.current_term, self.id, False, self.last_log_index()
+                    ),
+                )
+                return
+
+        # 追加/覆盖冲突
+        added = 0
+        if entries:
+            # 按顺序逐个处理（本演示每次最多 1 条）
+            idx = prev_idx + 1
+            ent = entries[0]
+            # 覆盖冲突
+            if self.last_log_index() >= idx and self.log[idx].term != ent.term:
+                self.log = self.log[:idx]
+            if self.last_log_index() < idx:
+                self.log.append(ent)
+                added = 1
+            else:
+                # 相同 term 则认为相同（幂等）
+                pass
+
+        # 推进提交
+        if leader_commit > self.commit_index:
+            self.commit_index = min(leader_commit, self.last_log_index())
+        dlog(
+            "follower_append",
+            f"[{now_tick}] Node{self.id} -> Leader{leader_id}: "
+            f"APPEND_RESP OK match={self.last_log_index()} (added={added}) commit={self.commit_index}",
+        )
+        self.net.send(
+            now_tick,
+            leader_id,
+            msg_append_resp(self.current_term, self.id, True, self.last_log_index()),
+        )
+
+    def handle_append_resp(self, now_tick: int, m: dict):
+        frm = m["from"]
+        success = m["success"]
+        match = m["match_index"]
+        if success:
+            old_next = self.next_index[frm]
+            self.match_index[frm] = match
+            self.next_index[frm] = match + 1
+            dlog(
+                "append_resp",
+                f"[{now_tick}] Leader{self.id} <= Node{frm}: "
+                f"APPEND_RESP success match={match} next_index: {old_next} -> {self.next_index[frm]}",
+            )
+            self.try_advance_commit(now_tick)
+        else:
+            old_next = self.next_index[frm]
+            # 回退并重试（最小化实现：-1）
+            self.next_index[frm] = max(0, self.next_index[frm] - 1)
+            dlog(
+                "append_resp",
+                f"[{now_tick}] Leader{self.id} <= Node{frm}: "
+                f"APPEND_RESP FAIL (follower_match={match}) next_index: {old_next} -> {self.next_index[frm]}",
+            )
+            # 立刻重发一次
+            self.send_append_one(now_tick, frm)
+
+    # ---- Leader：心跳与发送复制 ----
+    def send_heartbeats(self, now_tick: int):
+        if self.state != "Leader":
+            return
+        for p in self.peers:
+            if p == self.id:
+                continue
+            self.send_append_one(now_tick, p)
+
+    def send_append_one(self, now_tick: int, follower: int):
+        prev_idx = self.next_index[follower] - 1
+        prev_term = self.log[prev_idx].term if prev_idx >= 0 else -1
+        # 逐条发：从 next_index 开始拿 1 条
+        entries = []
+        if self.next_index[follower] <= self.last_log_index():
+            entries = [self.log[self.next_index[follower]]]
+        dlog(
+            "send_append",
+            f"[{now_tick}] Leader{self.id} -> Node{follower}: "
+            f"APPEND(prev={prev_idx}/{prev_term}, send={len(entries)}, leaderCommit={self.commit_index})",
+        )
+        self.net.send(
+            now_tick,
+            follower,
+            msg_append(
+                self.current_term,
+                self.id,
+                prev_idx,
+                prev_term,
+                entries,
+                self.commit_index,
+            ),
+        )
+
+    # ---- 多数派提交（仅当前任期） ----
+    def try_advance_commit(self, now_tick: int):
+        # 只推进当前任期的日志
+        for i in range(self.last_log_index(), self.commit_index, -1):
+            if self.log[i].term != self.current_term:
+                continue
+            # 统计有多少副本（含 Leader 自己）已匹配到 >= i
+            cnt = 1  # self
+            for p, m_idx in self.match_index.items():
+                if p == self.id:  # 不会出现，但以防万一
+                    continue
+                if m_idx >= i:
+                    cnt += 1
+            if cnt >= self.majority():
+                self.commit_index = i
+                print(f"[{now_tick}] Leader{self.id}: commit -> {self.commit_index}")
+                break
+
+    # ---- 应用到状态机（银行转账） ----
+    def apply_commits(self, now_tick: int):
+        while self.last_applied < self.commit_index:
+            self.last_applied += 1
+            ent = self.log[self.last_applied]
+            self.apply_cmd(ent.cmd, now_tick)
+
+    def apply_cmd(self, cmd: str, now_tick: int):
+        # 仅支持：transfer A B 100
+        try:
+            op, a, b, amt = cmd.split()
+            amt = int(amt)
+            if op != "transfer":
+                return
+            self.state_machine[a] -= amt
+            self.state_machine[b] += amt
+            if self.id == 0:  # 只让一个节点打印，避免刷屏
+                dlog(
+                    "apply",
+                    f"[{now_tick}] Node{self.id} APPLY: {cmd} ; State={self.state_machine}",
+                )
+        except Exception:
+            pass
+
+    # ---- 客户端请求入口（仅 Leader 调用） ----
+    def propose(self, now_tick: int, cmd: str):
+        if self.state != "Leader" or not self.alive:
+            return False
+        self.log.append(Entry(self.current_term, cmd))
+        # 自己等价于已匹配
+        self.match_index[self.id] = self.last_log_index()
+        # 立刻对各 Follower 发送一次
+        for p in self.peers:
+            if p == self.id:
+                continue
+            self.send_append_one(now_tick, p)
+        print(
+            f"[{now_tick}] Leader{self.id}: propose -> {cmd} (idx={self.last_log_index()})"
+        )
+        return True
+
+
+# ========= 仿真驱动 =========
+def run_demo():
+    net = Network()
+    nodes = [Node(i, list(range(N)), net) for i in range(N)]
+
+    # 演示脚本控制
+    injected = False
+    crashed_leader_id: Optional[int] = None
+
+    for now in range(T_MAX + 1):
+        # 1) tick
+        for nd in nodes:
+            nd.tick(now)
+
+        # 2) 网络投递
+        for to_id, msg in net.deliver(now):
+            nodes[to_id].on_msg(now, msg)
+
+        # 3) 若产生 Leader，注入一笔交易（仅限一次）
+        leader = first_leader(nodes)
+        if leader and not injected and now > 30:
+            ok = leader.propose(now, "transfer A B 100")
+            if ok:
+                injected = True
+
+        # 4) 整死 Leader，观察重选；再恢复
+        if leader and now == CRASH_LEADER_AT:
+            leader.alive = False
+            crashed_leader_id = leader.id
+            print(f"[{now}] !!! Crash Leader{leader.id}")
+
+        if crashed_leader_id is not None and now == RECOVER_LEADER_AT:
+            nodes[crashed_leader_id].alive = True
+            nodes[crashed_leader_id].rand_election_reset(now)
+            print(f"[{now}] >>> Recover Node{crashed_leader_id}")
+            crashed_leader_id = None
+
+    # 打印各节点终态
+    print("\n=== FINAL STATES ===")
+    for nd in nodes:
+        print(
+            f"Node{nd.id} term={nd.current_term} role={nd.state:9} "
+            f"commit={nd.commit_index} applied={nd.last_applied} "
+            f"SM={nd.state_machine}"
+        )
+
+
+def first_leader(nodes: List[Node]) -> Optional[Node]:
+    for nd in nodes:
+        if nd.state == "Leader" and nd.alive:
+            return nd
+    return None
+
+
+if __name__ == "__main__":
+    run_demo()
+```
+
+## 常见错误
+
+1. **误把心跳当提交**：AppendEntries 成功 ≠ 已提交，必须满足**提交规则**
+2. **日志新旧写反了**：应先比 term，后比 index
+3. **Follower 不删冲突**：收到冲突检查后必须**截断**
+4. **非确定性状态机**：时间戳或随机数参与结果导致同序不同果
+5. **读一致性疏忽**：Leader 过期仍在提供线性读
+6. **成员变更一步切换**：应经过**联合共识**
+
+# 总结 & 预告
+
+## 本讲小结
+
+* **复制操作**优于**复制状态**的关键在于：**确定性状态机 + 一致顺序**
+* **Raft**把共识拆解为“选举、复制、安全”三个子问题，以**任期**与**多数派**贯穿，记住：随机超时选主、日志匹配校验、当前任期提交等具体规则
+* 理念同宗，路径不同：**Paxos**提供理论基石，**Raft**提供工程落地
+
+## 思考题
+
+1. 为什么选举超时必须**随机化**？
+2. 若 4 节点分区成 2|2，会发生什么？如何恢复？
+3. 设计一个**非确定性操作**（如使用 `random()`），说明为什么会破坏 SMR
+4. 如果把“复制状态”与“复制操作”结合使用，会带来哪些工程优势？
+
+## 下节预告
+
+分区与分片
+
+* 如何切分数据？
+* 如果有节点数量变动了怎么办？
+
+## 作业 #2：Raft 青春版 {.smaller}
+
+编程实现“选举+心跳+日志追加”的 **Raft 青春版**。并应用于你感兴趣的业务场景的特定状态机，故意制造 Leader 宕机故障。打印状态转移与提交点。**业务场景**例如：
+
+|场景|状态|命令|观察点|
+|--|--|--|--|
+|计数器|`value`, `seen_ids`|`inc delta uuid`|重复递交不会二次累加|
+|井字棋|`board[3,3]`, `turn`, `winner`|`place x y player`|非法操作被拒绝；一致胜负|
+|工作流审批|`{doc → state}`|`submit doc`, `approve doc role`, `reject doc role`|顺序化审批链；只读查询一致性|
+|待办看板|`{task_id → {text, column, assignment}`|`new id "text"`, `move id column`, `assign id user`, `done id`|合法迁移约束 ToDo→Doing→Done|
+
+
+## 参考资料与延伸阅读
+
+* *In Search of an Understandable Consensus Algorithm (Raft)*
+* *Paxos Made Simple*
+* 状态机复制、线性一致读等

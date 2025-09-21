@@ -1,0 +1,1241 @@
+---
+title: "分布式数据库开发"
+subtitle: "第1讲：分布式时间观"
+author: "叶鸿"
+date: "2025-09-10"
+lang: zh-CN
+format:
+  revealjs:
+    theme: [default]
+    slide-number: true
+    toc: false
+    overview: true
+    transition: slide
+    code-line-numbers: true
+    preview-links: auto
+    chalkboard: true
+mermaid-format: svg
+---
+
+## 为什么先谈“时间”？
+
+- 在分布式系统里，没有任何节点能掌握**全局唯一正确时刻**  
+- 一致性、故障恢复、性能优化等问题的“根”往往指向**时间与顺序**
+- 问题：**没有全局时钟**的世界里，怎样定义“先后”？怎样复现“正确的顺序”？
+
+::: callout-warning
+同一瞬间在不同机器上的“时间”并非一致；网络延迟、时钟漂移与回拨都会打乱我们以为天然存在的顺序。
+:::
+
+## 学习目标
+
+- 解释物理时钟的局限（NTP精度、漂移、回拨/闰秒）
+- 掌握 **Lamport 时钟** 与 **向量时钟** 的思想与规则
+- 理解 **Google Spanner TrueTime** 与 **混合逻辑时钟（HLC）**
+- 将“时间”映射为**日志（WAL / 事件溯源）**以获得确定性重放
+
+# 物理时间
+
+## 思考：银行转账的 1ms
+
+::: {.incremental}
+- 北京 ATM：15:00:00.000 取款 ¥1000  
+- 上海手机：15:00:00.001 查询余额  
+- 看到的是**扣款前**还是**扣款后**的余额？
+- 复杂性来源：
+  - 网络延迟
+  - 服务器时钟偏差
+  - 不可判定的“先后”
+:::
+
+## 单机数据库的情况 {.smaller}
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant ATM_BJ as 北京ATM
+    participant Phone_SH as 上海手机
+    participant DB as 单机数据库
+
+    Note over DB: 单机DB作为唯一的顺序点，提交日志/锁/序列化顺序
+    Note over ATM_BJ,Phone_SH: 终端时钟可不同步；<br/>以DB“接收顺序”为准定义先后
+
+    ATM_BJ->>DB: 取款 ¥1000 〔ATM 本地 15:00:00.000〕
+    DB->>DB: 开启Txn T1；余额-1000；提交〔DB 本地 15:00:00.004〕
+    Phone_SH->>DB: 查询余额 〔手机 本地 15:00:00.001〕
+    rect rgba(220,255,220,0.45)
+        Note over DB: 串行化顺序：T1(取款) → Q1(查询)
+    end
+    DB-->>Phone_SH: 返回余额（已扣款）〔DB 本地 15:00:00.006〕
+```
+
+## 单机数据库的情况（续） {.smaller}
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant ATM_BJ as 北京ATM
+    participant Phone_SH as 上海手机
+    participant DB as 单机数据库
+
+    Note over DB: 单机DB作为唯一的顺序点，提交日志/锁/序列化顺序
+    Note over ATM_BJ,Phone_SH: 终端时钟可不同步；<br/>以DB“接收顺序”为准定义先后
+
+    Phone_SH->>DB: 查询余额 〔手机 本地 15:00:00.001〕
+    rect rgba(220,240,255,0.45)
+        Note over DB: 串行化顺序：Q1(查询) → T1(取款)
+    end
+    DB-->>Phone_SH: 返回余额（未扣款）〔DB 本地 15:00:00.003〕
+    ATM_BJ->>DB: 取款 ¥1000 〔ATM 本地 15:00:00.000〕
+    DB->>DB: 开启Txn T1；余额-1000；提交〔DB 本地 15:00:00.007〕
+```
+
+## 分布式数据库的情况
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    %% 参与者
+    participant ATM_BJ as 北京ATM
+    participant Svr_BJ as 北京服
+    participant Svr_SH as 上海服
+    participant Phone_SH as 上海手机
+
+    Note over Svr_BJ,Svr_SH: 时钟偏差：北京服务器+5ms；上海服务器-8ms<br/>跨城网络单程≈20–30ms；本地网络≈2–5ms
+
+    %% 1) 北京取款
+    ATM_BJ->>Svr_BJ: 取款 ¥1000 〔ATM 本地 15:00:00.000〕
+    Svr_BJ->>Svr_BJ: 提交交易 "Tx123"（余额-1000）〔北京服 本地 15:00:00.007〕
+    Svr_BJ-->>Svr_SH: 复制事务 "Tx123" 〔北京服 本地 15:00:00.009 发出〕
+
+    %% 2) 上海查询在复制到达之前发生（造成旧值）
+    par 跨城复制在路上
+        Svr_BJ-->>Svr_SH: （复制数据在链路中…）
+    and 用户在上海查询
+        Phone_SH->>Svr_SH: 查询余额 〔手机 本地 15:00:00.001〕
+        rect rgba(255,245,204,0.55)
+            Note over Phone_SH,Svr_SH: 可能出现“旧值”的读取窗口（复制尚未抵达/应用）
+            Svr_SH-->>Phone_SH: 返回余额 = 原值（未扣款）〔上海服 本地 14:59:59.999〕
+        end
+    end
+
+    %% 3) 复制稍后到达并应用
+    Svr_SH->>Svr_SH: 接收并应用 "Tx123" 〔上海服 本地 15:00:00.017〕
+    Note over Phone_SH,Svr_SH: 现已完成扣款，但用户刚才读到的是扣款前的余额（不一致视图）
+```
+
+## 物理时钟的困境
+
+**Network Time Protocol（NTP）的问题：**
+
+- 互联网环境常为**10ms 级**甚至更差；局域网也多为**ms 级**
+- 不同机器**时钟漂移**（温度/电压/硬件差异）
+- **闰秒**与**NTP 回拨**导致时间跳变或倒流
+
+**过度依赖本地物理时间：**
+```python
+import time
+
+def process_request(request):
+    ts = time.time()          # 本地物理时间
+    save_to_db(request, ts)   # 另一台机器时钟慢1s会造成顺序误判
+    return {"processed_at": ts}
+```
+
+## 依赖本地物理时间
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    %% 参与者
+    participant Client as 客户端
+    participant SvrA as 服务器A（快钟）
+    participant SvrB as 服务器B（慢钟）
+    participant DB as 数据库
+    participant Sorter as 排序/报表
+
+    %% 请求1 -> A
+    Client->>SvrA: 请求1（用户观测 10:00:00）
+    SvrA->>SvrA: process_request(): timestamp=10:00:00 （A本地）
+    SvrA->>DB: save_to_db(req1, ts=10:00:00)
+    DB-->>SvrA: OK
+    SvrA-->>Client: 返回 {"processed_at": "10:00:00"}
+
+    %% 请求2 -> B（真实更晚，但B的本地时钟更早）
+    Client->>SvrB: 请求2（用户观测 10:00:01）
+    Note over SvrB: B 的时钟慢 2s（记录到 09:59:59）
+    SvrB->>SvrB: process_request(): timestamp=09:59:59 （B本地）
+    SvrB->>DB: save_to_db(req2, ts=09:59:59)
+    DB-->>SvrB: OK
+    SvrB-->>Client: 返回 {"processed_at": "09:59:59"}
+
+    %% 错误排序的展示
+    Sorter->>DB: SELECT * FROM requests ORDER BY timestamp ASC
+    DB-->>Sorter: [ (req2, 09:59:59), (req1, 10:00:00) ]
+```
+
+## 物理时钟再进化：Google TrueTime
+
+* Spanner 提供**区间时间** `TT.now() -> [earliest, latest]`，显式暴露不确定性
+* **提交等待**：直到 `TT.after(commit_ts)` 为真才认定提交线性化生效
+* 依赖原子钟、GPS 与专用同步网络（昂贵但有效）
+
+**论文**：Corbett et al. 2012（OSDI）[Spanner: Google's Globally-Distributed Database](https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett)
+
+## 时间服务器
+
+![](./assets/time_server.png)
+
+# 逻辑时间
+
+## Lamport 时钟：思想
+
+> [Lamport（1978）](https://lamport.azurewebsites.net/pubs/time-clocks.pdf)提出：**我们不必知道“几时发生”，只要能给出“谁先于谁”**。
+
+**Happened-Before（→）定义：**
+
+1. 同进程内顺序：a 在 b 之前，则 a → b
+2. 发送/接收消息：send(m) → recv(m)
+3. 传递性：a → b 且 b → c，则 a → c
+
+## Lamport 时钟：规则与实现
+
+**规则：**
+
+* 本地事件：`Ci := Ci + 1`
+* 发送消息：先 `Ci := Ci + 1`，把 `Ci` 附在消息中
+* 接收消息：`Cj := max(Cj, tm) + 1`
+
+```python
+class LamportClock:
+    def __init__(self): self.c = 0
+    def tick(self): self.c += 1; return self.c
+    def send(self, msg): self.c += 1; msg["lamport"]=self.c; return msg
+    def recv(self, msg): self.c = max(self.c, msg["lamport"]) + 1; return self.c
+```
+
+::: callout-note
+若 A → B，则 `C(A) < C(B)`；反之不成立，小于不代表必然存在因果
+:::
+
+## Lamport 时钟：示例
+
+```{mermaid}
+%%| fig-width: 7
+sequenceDiagram
+    autonumber
+    participant P1 as 订单服务
+    participant P2 as 库存服务
+    participant P3 as 支付服务
+
+    %% --- t = 0 ---
+    P1->>P1: t=0 [1] 接收客户订单
+    P2->>P2: t=0 [1] 系统启动
+    P3->>P3: t=0 [1] 系统启动
+
+    %% --- t = 1 ---
+    P1->>P2: t=1 [2] 发送“检查库存” （msg.ts=2）
+    P2->>P2: t=1 [3] 接收“检查库存”（应用 C2=3）
+    P3->>P3: t=1 [2] 本地检查支付配置
+
+    %% --- t = 2 ---
+    P2-->>P1: t=2 [4] 发送“库存充足” （msg.ts=3）
+    P1->>P1: t=2 [4] 接收“库存充足”（应用 C1=4）
+    P3->>P3: t=2 [3] 等待支付请求
+
+    %% --- t = 3 ---
+    P1->>P2: t=3 [5] 发送“预扣库存” （msg.ts=5）
+    P2->>P2: t=3 [6] 接收“预扣库存”（应用 C2=6）
+```
+
+## Lamport 时钟：局限
+
+::: {.incremental}
+- 订单、库存、支付三个服务协作，可正确给出偏序
+- 但是，无法判定“并发”与“因果无关”的细粒度关系
+:::
+
+::: callout-tip
+例如两个独立本地事件 `A` 与 `B` 可能同一时间戳或只给出 `<`，但无法说明是否存在真正的因果链路。
+:::
+
+## 向量时钟：精确刻画因果
+
+::: {.incremental}
+- 为了精确刻画因果关系，我们需要向量时钟（Vector Clock）
+- 其核心思想是：**每个进程不仅维护自己的逻辑时钟，还维护对其他所有进程逻辑时钟的认知**
+- 维护长度为 *n* 的向量`V`，第 *i* 维记录“我对进程 *i* 逻辑时钟的认知”，其中
+  - `Vi[i]` 表示进程`Pi`自己的逻辑时钟
+  - `Vi[j]` 表示进程`Pi`对进程`Pj`逻辑时钟的最新认知
+:::
+
+## 向量时钟：规则
+
+* 本地事件：`Vi[i] += 1`
+* 发送消息：先本地加 1，再附整个向量
+* 接收消息：各维取 `max()` 融合，最后 `Vj[j] += 1`
+
+**比较：**
+
+* `Va → Vb` 当且仅当 `∀i: Va[i] ≤ Vb[i]` 且 `∃j: Va[j] < Vb[j]`
+* 否则若互不支配，则并发 `Va || Vb`
+
+
+## 向量时钟：代码示例
+
+```python
+class VectorClock:
+    def __init__(self, pid, n): self.pid, self.v = pid, [0]*n
+    def tick(self): self.v[self.pid]+=1; return self.v[:]
+    def send(self, m): self.tick(); m["vc"]=self.v[:]; return m
+    def recv(self, m):
+        w=m["vc"]
+        for i in range(len(self.v)):
+            if i!=self.pid: self.v[i]=max(self.v[i], w[i])
+        self.v[self.pid]+=1
+        return self.v[:]
+```
+
+## 向量时钟：示例
+
+```{mermaid}
+%%| fig-width: 7
+sequenceDiagram
+    autonumber
+    participant P0 as Alice
+    participant P1 as Bob
+    participant P2 as Charlie
+
+    %% P0 -> P1: "Hi"
+    P0->>P1: "Hi" (msg.vc=[1,0,0])  P0 发送前自增
+
+    %% P1 接收并回复 "Hello"
+    P1->>P1: 接收 "Hi" (vc=[1,1,0])  max([0,0,0],[1,0,0])→[1,0,0], 再自增 P1→[1,1,0]
+    P1-->>P0: "Hello" (msg.vc=[1,2,0]) 发送前自增
+
+    %% P1 再发给 P2: "How are you?"
+    P1-->>P2: "How are you?" (msg.vc=[1,3,0]) 再次自增后发送
+
+    %% P0 接收 "Hello" 并稍后发给 P2: "Fine"
+    P0->>P0: 接收 "Hello" (vc=[2,2,0]) max([1,0,0],[1,2,0])→[1,2,0], 再自增 P0→[2,2,0]
+    P0-->>P2: "Fine" (msg.vc=[3,2,0]) 发送前自增
+
+    %% P2 启动并接收/回复
+    P2->>P2: 启动 (vc=[0,0,1]) 本地事件自增 P2
+    P2->>P2: 接收 "How are you?" (vc=[1,3,2]) max([0,0,1],[1,3,0])→[1,3,1], 再自增 P2→[1,3,2]
+    P2-->>P1: "Good" (msg.vc=[1,3,3]) 发送前自增
+
+    %% P1 接收 "Good"
+    P1->>P1: 接收 "Good" (vc=[1,4,3]) max([1,3,0],[1,3,3])→[1,3,3], 再自增 P1→[1,4,3]
+```
+
+## 向量时钟：示例（续）{.smaller}
+
+::: columns
+::: column
+**Alice** / P1
+
+- A1：发送 “Hi” → P1，vc = [1,0,0]
+- A2：接收 “Hello”（来自 P1），vc = [2,2,0]
+- A3：发送 “Fine” → P2，vc = [3,2,0]
+
+**Bob** / P2
+
+- B1：接收 “Hi”（来自 P0），vc = [1,1,0]
+- B2：发送 “Hello” → P0，vc = [1,2,0]
+- B3：发送 “How are you?” → P2，vc = [1,3,0]
+- B4：接收 “Good”（来自 P2），vc = [1,4,3]
+:::
+::: column
+**Charlie** / P3
+
+- C0：启动，vc = [0,0,1]
+- C1：接收 “How are you?”（来自 P1），vc = [1,3,2]
+- C2：发送 “Good” → P1，vc = [1,3,3]
+
+```{dot}
+//| fig-height: 2
+//| fig-width: 2
+digraph Example {
+    layout = neato
+    overlap = false
+    node [shape=circle, width=0.4]; A1; B1;
+    A1 -> B1;
+}
+```
+:::
+:::
+
+## 向量时钟：示例（续）{.smaller}
+
+```{dot}
+digraph HB {
+  rankdir=BT;
+  graph [fontname="Helvetica", fontsize=12, labelloc="t", label="Happened-Before 关系全图"];
+  node [shape=box, fontname="Helvetica", fontsize=11, style="rounded,filled", fillcolor="white"];
+  edge [color="#555555"];
+
+  subgraph cluster_P0 {
+    style=filled; color="#dddddd";
+    label="Alice"; fillcolor="#eaf5ff";
+    A1 [label="A1\n[1,0,0]"];
+    A2 [label="A2\n[2,2,0]"];
+    A3 [label="A3\n[3,2,0]"];
+    A1 -> A2 [style=invis, weight=2];
+    A2 -> A3 [style=invis, weight=2];
+  }
+  subgraph cluster_P1 {
+    style=filled; color="#dddddd";
+    label="Bob"; fillcolor="#eafaf0";
+    B1 [label="B1\n[1,1,0]"];
+    B2 [label="B2\n[1,2,0]"];
+    B3 [label="B3\n[1,3,0]"];
+    B4 [label="B4\n[1,4,3]"];
+    B1 -> B2 [style=invis, weight=2];
+    B2 -> B3 [style=invis, weight=2];
+    B3 -> B4 [style=invis, weight=2];
+  }
+  subgraph cluster_P2 {
+    style=filled; color="#dddddd";
+    label="Charlie"; fillcolor="#fff5e6";
+    C0 [label="C0\n[0,0,1]"];
+    C1 [label="C1\n[1,3,2]"];
+    C2 [label="C2\n[1,3,3]"];
+    C0 -> C1 [style=invis, weight=2];
+    C1 -> C2 [style=invis, weight=2];
+  }
+
+  // 基关系（程序顺序 + 消息）—— 蓝色实线
+  A1 -> A2 [penwidth=2, color="#1f78b4"];
+  A2 -> A3 [penwidth=2, color="#1f78b4"];
+  B1 -> B2 [penwidth=2, color="#1f78b4"];
+  B2 -> B3 [penwidth=2, color="#1f78b4"];
+  B3 -> B4 [penwidth=2, color="#1f78b4"];
+  C0 -> C1 [penwidth=2, color="#1f78b4"];
+  C1 -> C2 [penwidth=2, color="#1f78b4"];
+  A1 -> B1 [penwidth=2, color="#1f78b4"];  // "Hi"
+  B2 -> A2 [penwidth=2, color="#1f78b4"];  // "Hello"
+  B3 -> C1 [penwidth=2, color="#1f78b4"];  // "How are you?"
+  C2 -> B4 [penwidth=2, color="#1f78b4"];  // "Good"
+
+  // 传递闭包中的其它 HB 边 —— 灰色虚线
+  A1 -> A3 [style=dashed, color="#999999"];
+  A1 -> B2 [style=dashed, color="#999999"];
+  A1 -> B3 [style=dashed, color="#999999"];
+  A1 -> B4 [style=dashed, color="#999999"];
+  A1 -> C1 [style=dashed, color="#999999"];
+  A1 -> C2 [style=dashed, color="#999999"];
+
+  B1 -> A2 [style=dashed, color="#999999"];
+  B1 -> A3 [style=dashed, color="#999999"];
+  B1 -> B3 [style=dashed, color="#999999"];
+  B1 -> B4 [style=dashed, color="#999999"];
+  B1 -> C1 [style=dashed, color="#999999"];
+  B1 -> C2 [style=dashed, color="#999999"];
+
+  B2 -> A3 [style=dashed, color="#999999"];
+  B2 -> B4 [style=dashed, color="#999999"];
+  B2 -> C1 [style=dashed, color="#999999"];
+  B2 -> C2 [style=dashed, color="#999999"];
+
+  B3 -> C2 [style=dashed, color="#999999"];
+
+  C0 -> C2 [style=dashed, color="#999999"];
+  C0 -> B4 [style=dashed, color="#999999"];
+  C1 -> B4 [style=dashed, color="#999999"];
+}
+```
+
+## 练习：场景描述 {.smaller}
+
+- P0 / ATM（客户存款前端）：受理客户向账户存入 ¥500，并把“存款事务”发给核心账本。
+- P1 / Ledger（核心账本服务）：接收并入账此存款，写 WAL；随后给 ATM 回执；并向移动端侧推送“余额已更新”事件；稍后处理来自移动端的余额查询并回复当前余额。
+- P2 / Mobile（移动端/余额查询）：用户打开 App；先收到“余额已更新”的推送，再主动发起“查询余额”，并收到账本回复。
+
+::: callout-note
+发送前对本进程分量 +1；接收时先逐位 max，再对本进程分量 +1
+:::
+
+## 练习：时序
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant P0 as ATM
+    participant P1 as Ledger
+    participant P2 as Mobile
+
+    %% A1: ATM 发起存款
+    P0-->>P1: A1 存款 ¥500 (msg.vc=[1,0,0])
+
+    %% B1,B2,B3: 账本处理、回执、推送更新
+    P1->>P1: B1 接收存款并入账 (vc=[1,1,0])
+    P1-->>P0: B2 回执(已入账) (msg.vc=[1,2,0])
+    P1-->>P2: B3 推送“余额已更新” (msg.vc=[1,3,0])
+
+    %% A2: ATM 收到回执
+    P0->>P0: A2 收到回执 (vc=[2,2,0])
+
+    %% C0,C1: 移动端启动后收到更新
+    P2->>P2: C0 打开App (vc=[0,0,1])
+    P2->>P2: C1 收到“余额已更新” (vc=[1,3,2])
+
+    %% C2,B4,B5,C3: 移动端查询余额，账本回复
+    P2-->>P1: C2 查询余额 (msg.vc=[1,3,3])
+    P1->>P1: B4 接收查询 (vc=[1,4,3])
+    P1-->>P2: B5 返回当前余额 (msg.vc=[1,5,3])
+    P2->>P2: C3 收到余额回复 (vc=[1,5,4])
+```
+
+## 练习：事件清单 {.smaller}
+
+::: columns
+::: column
+- P0 / ATM
+  - A1：发送“存款 ¥500” → P1，vc = [1,0,0]
+  - A2：接收“回执(已入账)” ← P1，vc = [2,2,0]
+- P1 / Ledger
+  - B1：接收“存款” ← P0，vc = [1,1,0]
+  - B2：发送“回执(已入账)” → P0，vc = [1,2,0]
+  - B3：发送“余额已更新” → P2，vc = [1,3,0]
+:::
+::: column
+- P1 / Ledger
+  - B4：接收“查询余额” ← P2，vc = [1,4,3]
+  - B5：发送“当前余额” → P2，vc = [1,5,3]
+- P2 / Mobile
+  - C0：打开 App，vc = [0,0,1]
+  - C1：接收“余额已更新” ← P1，vc = [1,3,2]
+  - C2：发送“查询余额” → P1，vc = [1,3,3]
+  - C3：接收“当前余额” ← P1，vc = [1,5,4]
+:::
+:::
+
+## 练习：HB 关系
+
+```{dot}
+digraph HB_Deposit {
+  rankdir=LR;
+  graph [fontname="Helvetica", fontsize=12, labelloc="t", label=""];
+  node [shape=box, fontname="Helvetica", fontsize=11, style="rounded,filled", fillcolor="white"];
+  edge [color="#555555"];
+
+  subgraph cluster_P0 {
+    style=filled; color="#cfe8ff"; label="P0 / ATM";
+    A1 [label="A1\n[1,0,0]"];
+    A2 [label="A2\n[2,2,0]"];
+  }
+  subgraph cluster_P1 {
+    style=filled; color="#dff5e5"; label="P1 / Ledger";
+    B1 [label="B1\n[1,1,0]"];
+    B2 [label="B2\n[1,2,0]"];
+    B3 [label="B3\n[1,3,0]"];
+    B4 [label="B4\n[1,4,3]"];
+    B5 [label="B5\n[1,5,3]"];
+  }
+  subgraph cluster_P2 {
+    style=filled; color="#fff0d9"; label="P2 / Mobile";
+    C0 [label="C0\n[0,0,1]"];
+    C1 [label="C1\n[1,3,2]"];
+    C2 [label="C2\n[1,3,3]"];
+    C3 [label="C3\n[1,5,4]"];
+  }
+
+  // 程序顺序
+  A1 -> A2 [style=dashed, color="#bbbbbb"]; // 非必然程序序
+  B1 -> B2 [color="#1f78b4", penwidth=2];
+  B2 -> B3 [color="#1f78b4", penwidth=2];
+  B3 -> B4 [style=dashed, color="#bbbbbb", label="", fontcolor="#999999"]; // 非必然程序序
+  B4 -> B5 [color="#1f78b4", penwidth=2];
+  C0 -> C1 [color="#1f78b4", penwidth=2];
+  C1 -> C2 [color="#1f78b4", penwidth=2];
+  C2 -> C3 [style=dashed, color="#bbbbbb"]; //  非必然程序序
+
+  // 消息因果
+  A1 -> B1 [color="#1f78b4", penwidth=2, label="存款"];
+  B2 -> A2 [color="#1f78b4", penwidth=2, label="回执"];
+  B3 -> C1 [color="#1f78b4", penwidth=2, label="余额已更新"];
+  C2 -> B4 [color="#1f78b4", penwidth=2, label="查询余额"];
+  B5 -> C3 [color="#1f78b4", penwidth=2, label="余额回复"];
+}
+```
+
+# 工业方案
+
+## 混合逻辑时钟（HLC）
+
+* 结构：`(pt, lc)` = 物理时间戳 + 逻辑计数器
+* 在保留物理时间可读性的同时，用逻辑计数消除回拨/并发造成的逆序
+* 对事件用词典序 `(pt, lc, node_id)` 排序即可得到全序，同时保持消息的因果先后不被时钟偏差打乱
+
+## 混合逻辑时钟：本地事件（tick）
+
+* 读取当前物理时间 `now`，令 `pt ← max(pt, now)`。
+* 若 `pt == now`（物理时间未落后于本地 HLC），则 `lc ← lc + 1`；否则（`pt` 来自旧的 HLC 而非 `now`），`lc ← 0`。
+
+::: callout-note
+优先跟随物理时间；当物理时间未回退时，逻辑计数器累加用来区分同一物理毫秒内的多事件。
+:::
+
+## 混合逻辑时钟：发送消息（send）{.smaller}
+
+* 先执行一次**本地事件**更新。
+* 将当前 `(pt, lc)` 附在消息上发送。
+
+::: callout-note
+每次发送都会产生一个**单调递增**的本地 HLC，并把这个“时间证据”随消息传播出去。
+:::
+
+## 混合逻辑时钟：接收消息（recv）{.smaller}
+
+* 读取 `now`，令 `pt ← max(local.pt, msg.pt, now)`。
+* 然后根据 `pt` 的来源更新 `lc`：
+
+  * 若 `pt == msg.pt == now`：`lc ← max(local.lc, msg.lc) + 1`
+  * 若 `pt == msg.pt`：`lc ← msg.lc + 1`
+  * 若 `pt == now`：`lc ← local.lc + 1`
+  * 否则：`lc ← 0`
+
+::: callout-note
+接收方把“最大时间证据”合并进来，并用 `lc` 打破同毫秒内或跨源的并发/并列，确保 **send < recv** 的因果单调性。
+:::
+
+## 混合逻辑时钟：算法
+
+```python
+import time
+
+class HLC:
+    def __init__(self):
+        self.pt = 0
+        self.lc = 0
+
+    def now_ms(self):
+        return int(time.time() * 1000)
+
+    def tick(self):
+        now = self.now_ms()
+        self.pt = max(self.pt, now)
+        self.lc = (self.lc + 1) if self.pt == now else 0
+        return (self.pt, self.lc)
+
+    def send(self, m):
+        m["hlc"] = self.tick()
+        return m
+
+    def recv(self, m):
+        mpt, mlc = m["hlc"]
+        now = self.now_ms()
+        self.pt = max(self.pt, mpt, now)
+        if self.pt == mpt == now:
+            self.lc = max(self.lc, mlc) + 1
+        elif self.pt == mpt:
+            self.lc = mlc + 1
+        elif self.pt == now:
+            self.lc = self.lc + 1
+        else:
+            self.lc = 0
+        return (self.pt, self.lc)
+```
+
+**参考**：[Kulkarni et al. 2014（PODC）](https://cse.buffalo.edu/tech-reports/2014-04.pdf)
+
+## 混合逻辑时钟：示例
+
+还是**银行转账**的例子：
+
+- **P0（Client/Alice 手机）**：向银行发起“转账 ¥100 给 Bob”。
+- **P1（Ledger/核心账本）**：收到转账→扣减 Alice 账户→向分区/副本发“记入 Bob（待确认）”→收到副本确认→给客户端回执。
+- **P2（Replica/分区副本）**：收到“记入 Bob”→入账→回 Ack。
+
+> 采用 HLC=`(pt,lc)`，以毫秒计。发送前先本地 tick；接收用三元 `max` 合并后按规则更新 `lc`。节点号用 P0=0，P1=1，P2=2 作为并列时的最后比较键。
+
+## 混合逻辑时钟：示例（续）
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant P0 as Client
+    participant P1 as Ledger
+    participant P2 as Replica
+
+    %% E1: P0 发送转账请求
+    Note over P0: tick: now=1000 → (1000,1)
+    P0-->>P1: E1 TransferRequest (msg.hlc=(1000,1))
+
+    %% E2: P1 接收请求
+    rect rgba(220,240,255,0.5)
+    Note over P1: recv: now=0999<br/>pt=max(0,1000,999)=1000，pt==msg.pt → lc=msg.lc+1=2 → (1000,2)
+    end
+
+    %% E3: P1 本地扣款
+    Note over P1: local: now=1000 → pt=1000==now → lc=3 → (1000,3)
+    P1->>P1: E3 Debit(Alice)  (1000,3)
+
+    %% E4: P1 发送“记入 Bob”
+    Note over P1: send 前 tick: now=1000 → lc=4 → (1000,4)
+    P1-->>P2: E4 Credit(Bob,prepare) (msg.hlc=(1000,4))
+
+    %% E5: P2 接收“记入 Bob”
+    rect rgba(220,240,255,0.5)
+    Note over P2: recv: now=0995<br/>pt=max(0,1000,995)=1000，pt==msg.pt → lc=msg.lc+1=5 → (1000,5)
+    end
+    P2->>P2: E5 Apply(Bob,hold) (1000,5)
+
+    %% E6: P2 本地完成入账（示例再来一次本地事件）
+    Note over P2: local: now=1000 → lc=6 → (1000,6)
+    P2->>P2: E6 Commit(Bob) (1000,6)
+
+    %% E7: P2 发送确认给 P1
+    Note over P2: send 前 tick: now=1000 → lc=7 → (1000,7)
+    P2-->>P1: E7 Ack (msg.hlc=(1000,7))
+
+    %% E8: P1 接收确认
+    rect rgba(220,240,255,0.5)
+    Note over P1: recv: now=1001<br/>pt=max(1000,1000,1001)=1001，pt==now → lc=local.lc+1=5 → (1001,5)
+    end
+    P1->>P1: E8 Finalize Tx (1001,5)
+
+    %% E9: P1 发送成功回执给 P0
+    Note over P1: send 前 tick: now=1001 → lc=6 → (1001,6)
+    P1-->>P0: E9 Receipt (msg.hlc=(1001,6))
+
+    %% E10: P0 接收回执
+    rect rgba(220,240,255,0.5)
+    Note over P0: recv: now=1002<br/>pt=max(1000,1001,1002)=1002，pt==now → lc=local.lc+1=2 → (1002,2)
+    end
+```
+
+## 混合逻辑时钟：示例（续） {.smaller}
+
+记节点号 P0=0，P1=1，P2=2，用词典序 `(pt,lc,node)` 排序：
+
+| 事件    | 描述                         | HLC=(pt,lc) | node |
+| ------- | ---------------------------- | ----------- | ---- |
+| **E1**  | P0 发送 TransferRequest → P1 | (1000,1)    | 0    |
+| **E2**  | P1 接收 TransferRequest      | (1000,2)    | 1    |
+| **E3**  | P1 本地扣款 Alice            | (1000,3)    | 1    |
+| **E4**  | P1 发送 Credit(Bob) → P2     | (1000,4)    | 1    |
+| **E5**  | P2 接收 Credit               | (1000,5)    | 2    |
+| **E6**  | P2 本地提交 Bob              | (1000,6)    | 2    |
+| **E7**  | P2 发送 Ack → P1             | (1000,7)    | 2    |
+| **E8**  | P1 接收 Ack 并最终提交       | (1001,5)    | 1    |
+| **E9**  | P1 发送回执 → P0             | (1001,6)    | 1    |
+| **E10** | P0 接收回执                  | (1002,2)    | 0    |
+
+物理时间跨节点有偏差，但 HLC 保证 **send < recv** 与整体单调性，体现了**因果性**
+
+## 混合逻辑时钟：示例（续） {.smaller}
+
+```{dot}
+digraph HB_Transfer_HLC {
+  rankdir=LR;
+  graph [fontname="Helvetica", fontsize=12, labelloc="t", label=""];
+  node [shape=box, fontname="Helvetica", fontsize=11, style="rounded,filled", fillcolor="white"];
+  edge [color="#1f78b4", penwidth=2];
+
+  subgraph cluster_P0 {
+    label="P0 / Client"; style=filled;color="#cfe8ff";
+    E1 [label="E1 Send Transfer\n(1000,1)"];
+    E10 [label="E10 Recv Receipt\n(1002,2)"];
+    E1 -> E10; // 程序顺序（同进程）
+  }
+
+  subgraph cluster_P1 {
+    label="P1 / Ledger"; style=filled; color="#dff5e5";
+    E2 [label="E2 Recv Transfer\n(1000,2)"];
+    E3 [label="E3 Debit Alice\n(1000,3)"];
+    E4 [label="E4 Send Credit→P2\n(1000,4)"];
+    E8 [label="E8 Recv Ack & Finalize\n(1001,5)"];
+    E9 [label="E9 Send Receipt→P0\n(1001,6)"];
+    E2 -> E3 -> E4 -> E8 -> E9;
+  }
+
+  subgraph cluster_P2 {
+    label="P2 / Replica"; style=filled; color="#fff0d9";
+    E5 [label="E5 Recv Credit\n(1000,5)"];
+    E6 [label="E6 Commit Bob\n(1000,6)"];
+    E7 [label="E7 Send Ack→P1\n(1000,7)"];
+    E5 -> E6 -> E7;
+  }
+
+  // 消息因果
+  E1 -> E2 [label="Transfer"];
+  E4 -> E5 [label="Credit"];
+  E7 -> E8 [label="Ack"];
+  E9 -> E10 [label="Receipt"];
+}
+```
+
+## 工业方案对比 {.smaller}
+
+* CockroachDB：`txn_timestamp()` / `hlc_to_timestamp()`
+* TiDB/Percolator 由 Placement Driver（PD）负责全局时间戳（TS）分配
+
+| 特性    | CockroachDB  | TiDB（PD/TSO）       |
+| ----- | ------------ | ------------------ |
+| 授时机制  | **HLC**（分布式） | **TSO**（中心化分配）     |
+| 顺序保证  | 偏序 + 物理可读    | 严格单调递增             |
+| 扩展性   | 水平扩展佳        | 受 TSO 扩展/冗余设计影响    |
+| 工程复杂度 | 较高           | 相对较低，贴近 Percolator |
+
+> 延伸阅读：[Peng & Dabek 2010（Percolator）](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Peng.pdf)；[Kleppmann 2017（DDIA）](https://learning.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/)
+
+# 日志
+
+## 错误的直觉：同步状态
+
+**如何在多台机器间保持数据一致？**
+
+传统的思路是尝试同步状态：
+
+```
+A的余额 = 1000  → 同步 → B的余额 = 1000
+```
+
+- 需要“瞬时”完成；网络与并发让“同时”成为幻觉
+- 如果半途失败（A 成功 / B 失败），永久不一致
+- 如果并发写入（转账+退款）顺序不一致，读到不同状态
+
+## 正确的方法：同步“可重放的操作”
+
+```
+在A上写日志：  [T1: 扣款500]
+复制日志到B：  [T1: 扣款500]
+B按顺序重放：余额 ← 余额 - 500
+```
+
+- **日志（WAL/Replication Log）**只追加、有序、可重放
+- 复制“**因果与顺序**”，而不是复制易变的“结果状态”
+- 崩溃后“**重放日志**”恢复到崩溃前的确定状态
+
+## 对比：状态同步 vs 操作同步
+
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant Client as 客户
+    participant A as 节点A（主）
+    participant B as 节点B（从）
+
+    rect rgba(255,235,235,0.5)
+    note over A,B: 同步状态（脆弱）
+    Client->>A: 扣款500
+    A->>A: 直接改状态（余额-500）
+    A-->>B: 同步“状态=500”
+    note over B: 网络延迟/故障 → 未生效
+    end
+
+    rect rgba(235,255,235,0.5)
+    note over A,B: 同步操作（日志）
+    Client->>A: 扣款500
+    A->>A: 先写 WAL: [T1: -500]
+    A->>A: 再改状态（余额-500）
+    A-->>B: 复制日志 [T1: -500]
+    B->>B: 重放 [T1] → 余额-500
+    end
+```
+
+
+## 把“时间观”固化为可重放序列
+
+**只追加、有序、可重放**：
+
+```
+[T1: 操作1] → [T2: 操作2] → [T3: 操作3] → ...
+```
+
+* **WAL（Write-Ahead Log，预写日志）**：先写日志，后改状态，崩溃后按序重放
+* **主从复制**：用时间戳/偏序确保重放一致
+* **Apache Kafka**分区内严格有序，全局以时间/偏序归并
+* **区块链**本质上是全局共识的“时间链”
+
+
+## 示例：银行账户的日志重放
+
+初始：余额=1000
+
+```
+[T1] -500   ; 转账
+[T2] +200   ; 退款
+[T3] +300   ; 存款
+```
+
+在任一副本，只要按 **T1 → T2 → T3** 重放，最终余额一致：
+1000 - 500 + 200 + 300 = **1000**
+
+## 典型写入路径
+
+伪代码：
+
+```python
+def process(op):
+    ts = hlc.tick()             # 取时间戳/顺序凭据（HLC/逻辑时钟）
+    wal.append(op, ts)          # 先写日志，持久化
+    apply(op)                   # 再改内存/状态
+    replicate(op, ts)           # 复制给从节点
+    ack_when_safe()             # 按策略确认（本地/多数派/提交点）
+```
+
+::: callout-note
+保障**崩溃不丢序、不乱序、可恢复**
+:::
+
+
+## 日志解决的问题
+
+- **顺序统一**：跨节点用 Lamport/向量时钟/HLC 或共识，给操作建立可靠的顺序
+- **恢复与再现**：WAL 先写日志再改状态；崩溃后按序重放
+- **复制与扩展**：主从/Raft/Kafka 分区内严格有序；读副本按日志跟进
+- **幂等与去重**：以请求ID+日志偏移管理重试，避免重复生效
+- **审计与回溯**：随时重建“当时世界”，方便调试/审计/回滚
+
+## 可观察性
+
+> "Logs, metrics, and traces are often known as the three pillars of observability. While plainly having access to logs, metrics, and traces doesn't necessarily make systems more observable, these are powerful tools that, if understood well, can unlock the ability to build better systems."
+>
+> —— Cindy Sridharan, *Distributed Systems Observability*
+
+## 实战演示：分布式 RPC
+
+* 多节点并发发送请求，加入**随机网络延迟/丢包**
+* 以 **HLC** 记录消息时序
+* 观察本地时间（`time.time()`/墙钟）排序与 HLC 排序的差异
+* 结论：**逻辑时间**比本地时钟更稳定地反映“因果顺序”
+
+> 课堂代码示例见课程仓库，可在本地运行观察排序差异。
+
+## 演示代码
+
+```python
+import time
+import random
+import threading
+import uuid
+
+
+class HybridLogicalClock:
+    """HLC = (pt, lc), pt=physical ms, lc=logical counter."""
+
+    def __init__(self):
+        self.pt = 0
+        self.lc = 0
+        self._lock = threading.Lock()
+
+    def _now_ms(self):
+        return int(time.time() * 1000)
+
+    def tick(self):
+        """Local event update, return (pt, lc)."""
+        with self._lock:
+            now = self._now_ms()
+            self.pt = max(self.pt, now)
+            if self.pt == now:
+                self.lc += 1
+            else:
+                self.lc = 0
+            return (self.pt, self.lc)
+
+    def send(self):
+        """Call before attaching to outgoing message."""
+        return self.tick()
+
+    def recv(self, msg_ts):
+        """Merge incoming (pt, lc) and return updated (pt, lc)."""
+        # msg_ts could be a tuple or a dict containing HLC
+        if isinstance(msg_ts, dict):
+            if "hlc" in msg_ts:
+                mpt, mlc = msg_ts["hlc"]
+            elif "hlc_timestamp" in msg_ts:
+                mpt, mlc = msg_ts["hlc_timestamp"]
+            elif "timestamp" in msg_ts:
+                mpt, mlc = msg_ts["timestamp"]
+            else:
+                raise ValueError("Incoming message missing HLC.")
+        else:
+            mpt, mlc = msg_ts
+
+        with self._lock:
+            now = self._now_ms()
+            new_pt = max(self.pt, mpt, now)
+            if new_pt == mpt == now:
+                new_lc = max(self.lc, mlc) + 1
+            elif new_pt == mpt:
+                new_lc = mlc + 1
+            elif new_pt == now:
+                new_lc = self.lc + 1
+            else:
+                new_lc = 0
+            self.pt, self.lc = new_pt, new_lc
+            return (self.pt, self.lc)
+
+    def current(self):
+        with self._lock:
+            return (self.pt, self.lc)
+
+
+class Network:
+    def __init__(self, drop_prob=0.1, delay_range=(0.01, 0.1)):
+        self.nodes = {}
+        self.drop_prob = drop_prob
+        self.delay_range = delay_range
+
+    def register(self, node):
+        self.nodes[node.node_id] = node
+
+    def send(self, message):
+        src = message["from"]
+        dst = message["to"]
+        delay = random.uniform(*self.delay_range)
+
+        def _deliver():
+            time.sleep(delay)
+            if random.random() < self.drop_prob:
+                print(f"网络失败：{src} -> {dst} (drop)")
+                return
+            target = self.nodes.get(dst)
+            if target is None:
+                print(f"投递失败：目标节点不存在 {dst}")
+                return
+            target.receive_message(message)
+
+        threading.Thread(target=_deliver, daemon=True).start()
+        return delay
+
+
+class DistributedRPCSystem:
+    def __init__(self, node_id, network: Network):
+        self.node_id = node_id
+        self.hlc = HybridLogicalClock()
+        self.network = network
+        self.log = []
+        self.message_log = []  # 记录所有消息（发送/接收）
+        self.request_history = set()  # 防重复的请求ID
+        self.network.register(self)
+
+    def _log_send(self, message, delay):
+        self.message_log.append(
+            {
+                "action": "send",
+                "message": message,
+                "local_time": time.time(),
+                "hlc_time": message["hlc"],  # 发送时所附带的 HLC
+                "delay": delay,
+            }
+        )
+
+    def _log_recv(self, message, recv_hlc):
+        self.message_log.append(
+            {
+                "action": "receive",
+                "message": message,
+                "local_time": time.time(),
+                "hlc_time": recv_hlc,  # 接收端合并后的 HLC
+            }
+        )
+
+    def call_remote(self, target_node, method, args):
+        """发起远程调用（request）。"""
+        request_id = str(uuid.uuid4())
+        hlc_ts = self.hlc.send()  # 发送前 tick
+
+        request = {
+            "id": request_id,
+            "from": self.node_id,
+            "to": target_node,
+            "method": method,
+            "args": args,
+            "hlc": hlc_ts,
+            "type": "request",
+        }
+
+        delay = self.network.send(request)
+        print(
+            f"[SEND] {self.node_id} -> {target_node} | {method} | HLC={hlc_ts} | 延迟≈{delay:.3f}s"
+        )
+        self._log_send(request, delay)
+        return request_id
+
+    def receive_message(self, message):
+        """接收消息（统一入口：request/response）。"""
+        # 幂等/去重（针对 request）
+        if message["type"] == "request" and message["id"] in self.request_history:
+            print(f"[DUP] {self.node_id} 检测到重复请求：{message['id']}")
+            return
+
+        # HLC 合并
+        recv_hlc = self.hlc.recv(message["hlc"])
+        self._log_recv(message, recv_hlc)
+
+        # 标记已处理（仅记录 request 去重；response 在此示例不去重）
+        if message["type"] == "request":
+            self.request_history.add(message["id"])
+
+        # 分派处理
+        if message["type"] == "request":
+            self.process_request(message)
+        elif message["type"] == "response":
+            self.process_response(message)
+
+    def process_request(self, request):
+        """处理 request 并发送 response。"""
+        method = request["method"]
+        args = request["args"]
+        print(f"[PROC] {self.node_id} 处理请求：{method}({args})")
+
+        # 模拟处理时间
+        time.sleep(random.uniform(0.01, 0.05))
+
+        # 构造响应（发送前 tick）
+        response_hlc = self.hlc.send()
+        response = {
+            "id": str(uuid.uuid4()),
+            "from": self.node_id,
+            "to": request["from"],
+            "original_request_id": request["id"],
+            "result": f"处理结果：{method}({args})",
+            "hlc": response_hlc,
+            "type": "response",
+        }
+
+        delay = self.network.send(response)
+        print(
+            f"[RESP] {self.node_id} -> {request['from']} | HLC={response_hlc} | 延迟≈{delay:.3f}s"
+        )
+        self._log_send(response, delay)
+
+    def process_response(self, response):
+        """处理 response（演示中仅打印）。"""
+        print(
+            f"[RECV-RESP] {self.node_id} 收到响应 for {response.get('original_request_id')} | HLC={self.hlc.current()}"
+        )
+
+    # 可扩展：本地业务操作
+    def local_event(self, note="local"):
+        ts = self.hlc.tick()
+        self.log.append((note, ts))
+        return ts
+
+
+def demonstrate_time_gaps():
+    net = Network(drop_prob=0.10, delay_range=(0.01, 0.10))
+
+    # 创建三个节点
+    nodes = {f"node{i}": DistributedRPCSystem(f"node{i}", net) for i in range(3)}
+
+    # 并发发送请求，观察时间顺序
+    def send_requests():
+        # 节点0向节点1发送转账请求
+        nodes["node0"].call_remote(
+            "node1", "transfer", {"amount": 100, "to": "account_B"}
+        )
+        time.sleep(0.05)
+
+        # 节点1向节点2发送查询请求
+        nodes["node1"].call_remote("node2", "query_balance", {"account": "account_B"})
+        time.sleep(0.05)
+
+        # 节点2向节点0发送审计请求
+        nodes["node2"].call_remote("node0", "audit", {"transaction_id": "tx_123"})
+
+    t = threading.Thread(target=send_requests)
+    t.start()
+    t.join()
+
+    # 等待所有可能的传输/处理完成
+    time.sleep(0.6)
+
+    # 汇总并按 HLC 顺序输出
+    print("\n=== 消息时序分析（按 HLC 排序） ===")
+    all_messages = []
+    for node_id, node in nodes.items():
+        for msg_info in node.message_log:
+            all_messages.append((node_id, msg_info))
+
+    # 加入 node_id 作为并列时的稳定 tie-breaker
+    all_messages.sort(key=lambda x: (x[1]["hlc_time"], x[0], x[1]["action"]))
+
+    for node_id, msg_info in all_messages:
+        hlc_time = msg_info["hlc_time"]
+        action = msg_info["action"]
+        message = msg_info["message"]
+        kind = message.get("method") or message.get("type")
+        delay = msg_info.get("delay")
+        if action == "send":
+            print(
+                f"HLC {hlc_time} | {node_id} {action} {kind} -> {message['to']} (delay≈{delay:.3f}s)"
+            )
+        else:
+            print(f"HLC {hlc_time} | {node_id} {action} {kind} <- {message['from']}")
+
+
+if __name__ == "__main__":
+    demonstrate_time_gaps()
+```
+
+# 总结 & 预告
+
+## 本讲小结
+
+1. 关键是顺序而非绝对时间
+2. **Lamport 时钟**给出了偏序；**向量时钟**刻画因果/并发；**HLC**平衡实用性与可读性
+3. 用**日志**把时间观操作化，WAL/复制/重放提供确定性
+
+## 思考题
+
+1. **Lamport 相等时间戳意味着什么？** 还能否存在未被观测到的因果？
+2. **HLC 小于一定表示因果先后吗？** 从因果兼容的全序角度思考
+3. **为什么都用 WAL？** 从原子性、恢复确定性与顺序写性能谈起
+4. **如何处理重复请求？** 幂等性 + 请求ID/时间窗 +（可选）向量时钟判新颖性
+
+## 下节预告
+
+复制语义与共识
+
+* 如何确保多个节点达成一致？
+* 如果有节点宕机了怎么办？
+* 如何保持同步？
+
+## 作业 #1：分布式计数器 {.smaller}
+
+* 三节点，可独立 `increment()`，这是基于 CRDT 的操作
+* 用 Lamport 为操作排序；使用日志同步
+* 模拟网络分区和重启恢复，最终达成一致
+* 需完成代码，并根据测试结果编写观察报告
+
+```python
+class DistributedCounter:
+    def __init__(self, node_id, peers):
+        self.node_id = node_id
+        self.peers = peers
+        self.value = 0
+        self.clock = LamportClock()
+        self.log = []
+        self.applied = set()
+
+    def increment(self, k=1):
+        # TODO: 生成操作(op_id, node, delta, ts)，追加本地日志并广播
+        pass
+
+    def apply_if_ready(self):
+        # TODO: 基于偏序/因果就绪性检查后应用，去重
+        pass
+
+    def sync(self):
+        # TODO: 交换日志，按时钟顺序归并与交付
+        pass
+```
+
+## 参考资料 {.smaller}
+
+1. Lamport, L. (1978). Time, clocks, and the ordering of events in a distributed system. *Communications of the ACM*.
+2. Fidge, C. J. (1988). Timestamps in message-passing systems that preserve the partial ordering. In *Proceedings of the 11th Australian Computer Science Conference*.
+3. Mattern, F. (1988). Virtual time and global states of distributed systems. *Parallel and Distributed Algorithms*.
+4. Corbett, J. C., Dean, J., Epstein, M., et al. (2012). Spanner: Google's globally-distributed database. In *Proceedings of the 10th USENIX Symposium on Operating Systems Design and Implementation* (OSDI 12).
+5. Kulkarni, S. S., Demirbas, M., Madappa, et al. (2014). Logical physical clocks and consistent snapshots in globally distributed databases. In *Proceedings of the 2014 ACM symposium on Principles of distributed computing*.
+
+## 参考资料（续） {.smaller}
+
+6. Peng, D., & Dabek, F. (2010). Large-scale incremental processing using distributed transactions and notifications. In *Proceedings of the 9th USENIX Symposium on Operating Systems Design and Implementation* (OSDI 10).
+7. Sridharan, C. (2018). *Distributed Systems Observability*. O'Reilly Media.
+8. Kleppmann, M. (2017). *Designing Data-Intensive Applications*. O'Reilly Media.
