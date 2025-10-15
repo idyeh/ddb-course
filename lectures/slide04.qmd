@@ -1,0 +1,557 @@
+---
+title: "分布式数据库开发"
+subtitle: "第3讲：分区与分片"
+author: "叶鸿"
+date: "2025-10-11"
+lang: zh-CN
+format:
+  revealjs:
+    theme: [default]
+    slide-number: true
+    toc: false
+    overview: true
+    transition: slide
+    code-line-numbers: true
+    preview-links: auto
+    chalkboard: true
+mermaid-format: svg
+---
+
+## 本讲学习目标 {.smaller} 
+- 理解**分区（partition）**和**分片（shard）**的概念
+- 了解常见分区和分片的类型，并能够针对案例做出分析
+- 识别**热点（hotspot）**成因，理解**分裂（split）、合并（merge）、迁移（rebalance）** 的策略  
+- 建立“**多Raft/多组复制**”的心智模型
+- 能根据业务冲突域设计**分片键（shard key）**，并预判对事务、JOIN、代价模型的影响
+
+::: callout-note
+后续多处将使用**Range/Region**表示一段连续主键空间的分片单位；它们通常由**独立的 Raft 复制组**维护，具备自治的**领导者**与**多数派提交**机制。
+:::
+
+## 术语对比 {.smaller}
+
+||分区（Partition）|分片（Shard）|
+|--|--|--|
+|**目的**|剪枝扫描、并行执行、生命周期运维统计信息分区化。|水平扩展、容灾高可用、热点治理、在线迁移/再均衡。|
+|**颗粒**|表内的**逻辑**子集合（RANGE/LIST/HASH/子分区）；单机与分布式系统都适用|可独立放置/迁移/复制的**物理**单元（Region/Tablet/Range 等）；常由共识组管理|
+|**语义**|影响SQL层可剪枝性、分区统计、分区对分区并行Join、局部/全局索引|影响路由/复制/一致读/写提案/lease转移/分裂合并等运行时行为|
+|**位置**|逻辑模式与优化器关注点，是否落到哪个节点并非它的职责|存储与调度关注点，直接决定读写路径与网络代价|
+
+## 两者的关系
+
+- 一个“分区”（逻辑）可以映射到一个或多个分片（物理）
+- 一个分片也可能同时承载多个小分区的数据块
+- 两者既可对齐，也可彼此独立演化
+
+
+# 分区
+
+## 概念与作用 {.smaller}
+- 从表内维度看，将一张**逻辑上单一**的表按某个键或表达式**切分为多个子区段**（分区/分区表），每个分区通常有**独立的存储与元数据**。
+- **目的**：
+  - 性能：分区**剪枝**（pruning）减少扫描范围，并行执行
+  - 运维：按分区做**滚动删除、归档、冷热分层**，降低维护成本
+  - 可用性：分区级恢复和重建，分布式系统中与副本或租约搭配
+
+
+## 逻辑分区 vs 物理分布  {.smaller}
+- **逻辑层**（SQL/优化器）定义分区键、边界、约束，查询时使用**分区剪枝**与**分区统计信息**。
+- **物理层**（存储/复制/路由）每个分区可能对应**独立的数据文件或对象**，在分布式系统中进一步映射到**Range/Region**，由**Raft或Paxos**等复制。
+- 常见映射：
+  - **1:1**：一个分区 ≈ 一个 Range/Region，简单清晰
+  - **1:N**：大分区进一步被自动split为多个 Range，避免单分区过大或热点
+  - **N:1**：多个小分区在物理上同驻，出现在小表或合并策略
+
+## 一种常见的映射图示
+
+```{mermaid}
+flowchart TB
+  T[逻辑表 T] --> P1[分区 P1]
+  T --> P2[分区 P2]
+  T --> P3[分区 P3]
+  P1 --> R1[Range/Region #1]
+  P1 --> R2[Range/Region #2]
+  P2 --> R3[Range/Region #3]
+  P3 --> R4[Range/Region #4]
+```
+
+## 分区类型 {.smaller}
+
+* **RANGE 分区**：按**有序区间**划分，常见于时间/数值/前缀。
+* **LIST 分区**：按**离散集合**划分，常见于国家/省份/类别。
+* **HASH 分区**：按表达式哈希分桶（均衡写入但牺牲范围友好）。
+* **复合分区/子分区**：外层（如 HASH/列表）+ 内层（如 RANGE），兼顾均匀与范围。
+* **表达式分区**：对派生列或函数结果分区（需注意可剪枝性与可计算性）。
+
+::: callout-tip
+选择分区类型的**核心问题**：你的**主路径查询**与**生命周期运维**如何进行？例如：
+
+- 按月删旧 → RANGE
+- 多租户隔离 → HASH/LIST
+:::
+
+## RANGE 分区的语义与示例 {.smaller}
+
+```sql
+-- 以 order_date 做 RANGE 分区
+CREATE TABLE orders (
+  order_id   BIGINT PRIMARY KEY,
+  tenant_id  BIGINT NOT NULL,
+  order_date DATE   NOT NULL,
+  amount     DECIMAL(12,2) NOT NULL
+) PARTITION BY RANGE (order_date);
+
+CREATE TABLE orders_2025_10 PARTITION OF orders
+  FOR VALUES FROM ('2025-10-01') TO ('2025-11-01');
+
+CREATE TABLE orders_2025_11 PARTITION OF orders
+  FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');
+```
+
+* **优点**：范围查询和汇总友好，按月/周**滚动窗口**易运维
+* **风险**：时间序写入导致**最新分区写热点**，需搭配**前台 split/租约迁移/速率限制**使用
+
+## LIST 分区的语义与示例 {.smaller}
+
+```sql
+-- 按国家代码 做 LIST 分区
+CREATE TABLE customers (
+  customer_id  BIGINT PRIMARY KEY,
+  country_code TEXT NOT NULL,
+  created_at   TIMESTAMP NOT NULL
+) PARTITION BY LIST (country_code);
+
+CREATE TABLE customers_cn PARTITION OF customers FOR VALUES IN ('CN');
+CREATE TABLE customers_us PARTITION OF customers FOR VALUES IN ('US');
+```
+
+* LIST 易表达**离散集合**，集合变化需要**维护元数据**
+
+## HASH 分区的语义与示例 {.smaller}
+
+```sql
+-- 按租户 ID 做 HASH 分区
+CREATE TABLE events (
+  event_id BIGINT PRIMARY KEY,
+  tenant_id BIGINT NOT NULL,
+  ts TIMESTAMP NOT NULL,
+  payload JSONB
+) PARTITION BY HASH (tenant_id);
+
+-- N 个桶
+-- 例如：PARTITIONS 8（TiDB/MySQL 风格），或显式创建 bucket_0..7（Postgres 风格）
+```
+
+* HASH 能对抗倾斜，但**范围查询不友好**，此外桶数变化涉及**重分布**策略
+
+## 复合/子分区 {.smaller}
+
+* 兼顾均匀与范围
+* **场景**：多租户 + 时间序分析
+
+  * 外层：`HASH(tenant_id)` → 将大租户写均匀散出
+  * 内层：`RANGE(order_date)` → 便于**近月查询**与**滚动归档**
+
+```sql
+-- 伪语法：不同系统的子分区定义略有差异
+CREATE TABLE orders (
+  order_id BIGINT,
+  tenant_id BIGINT,
+  order_date DATE,
+  ...
+) PARTITION BY HASH (tenant_id) SUBPARTITION BY RANGE (order_date);
+```
+
+* 注意：子分区层级越多，元数据与优化器**复杂度上升**，只在**明确收益**时采用
+
+## 分区剪枝与谓词可剪枝性 {.smaller}
+
+* 优化器根据查询谓词**静态/动态**情况，判断只访问相关分区，减少 I/O 开销。
+* **生效条件**：
+
+  * 谓词**可表达为分区边界上的约束**，如 `order_date BETWEEN ...`
+  * 表达式**可下推且可计算**，避免复杂函数或隐式类型转换导致不可剪枝
+
+## 谓词可剪枝性示例 {.smaller}
+
+```sql
+-- 能剪枝：仅扫描 2025-10 分区
+SELECT sum(amount)
+FROM orders
+WHERE order_date >= '2025-10-01' AND order_date < '2025-11-01';
+
+-- 可能无法剪枝（取决于系统的表达式下推/常量折叠能力）
+SELECT sum(amount)
+FROM orders
+WHERE date_trunc('month', order_date) = date '2025-10-01';
+```
+
+::: callout-warning
+**反模式**：在查询中对分区键做复杂函数/隐式类型转换（如把 `DATE` 转成 `TEXT` 比较），可能使优化器**放弃剪枝**。
+:::
+
+## 分区统计信息与优化器选择 {.smaller}
+
+* **分区级统计**：每个分区维护**行数/直方图/最值**，提高选择率估计精度。
+* **全局统计**：优化器需要**全局视图**以决定**连接顺序**与**并行度**。
+* **代价模型**：扫描分区数、跨分区数据移动、索引类型（本地/全局）都会影响计划。
+
+## 本地索引 vs 全局索引  {.smaller}
+
+* **本地索引（Local Index）**：每个分区单独维护索引，**写便宜**，查询需跨分区**多跳**。
+* **全局索引（Global Index）**：全表统一索引空间，**查找友好**，写入可能**放大**（跨分区维护）。
+* 实践建议：
+
+  * **主路径查询**优先保证能**剪枝 + 命中本地索引**。
+  * 跨分区访问频繁场景下，**谨慎引入全局索引**并评估写代价与一致性。
+
+## 分区对分区并行 {.smaller}
+
+* 若两个表按相同表达式或边界分区（或可对齐映射），等值连接可**分区对分区**并行（Partition-wise Join），无需重分区。
+* **条件**：
+
+  * 分区键对齐（同一键或可以单调映射的情况）
+  * 分区数量或边界一致（或可归并到一致）
+* **收益**：减少数据移动，利用并行度获取近线性加速。
+
+## 分区对分区并行：图示
+
+```{mermaid}
+flowchart LR
+  A1[表A: P1] --local join--> B1[表B: P1]
+  A2[表A: P2] --local join--> B2[表B: P2]
+  A3[表A: P3] --local join--> B3[表B: P3]
+```
+
+## 分区生命周期管理 {.smaller}
+
+* **常规操作**：
+
+  * `ADD/ATTACH PARTITION`：上线新窗口，如新月份
+  * `DROP/DETACH/TRUNCATE PARTITION`：快速删除/清空旧数据
+  * `SPLIT/MERGE`：动态调节分区粒度，部分系统以 Range/Region 层实现
+  * `EXCHANGE PARTITION`：与同构表**原位交换**，零拷贝归档/回灌
+* **滚动窗口（rolling window）**：
+
+  * 预建未来 N 个分区，到期自动 detach/drop 旧分区
+  * **存活时间（Time to live, TTL）**按时间自动过期，可作为细粒度补充
+* **冷热分层**：新数据留在**高性能存储**，旧分区迁往**便宜存储**（对象存储或冷盘）
+
+## 数据生命周期
+
+```{mermaid}
+gantt
+  dateFormat  MM-DD
+  tickInterval 2week
+  section 活跃窗口
+  10 月份分区 :active, p1, 10-01, 10-31
+  11 月份分区 :active, p2, 11-01, 11-30
+  section 归档窗口
+  08、09 月份归档 :done, a1, 08-01, 09-30
+```
+
+## 避免走进雷区  {.smaller}
+
+* **单分区过大**：全表如同单区，剪枝/并行无从谈起。
+* **对分区键做复杂函数**：导致优化器无法剪枝。
+* **过度子分区**：元数据爆炸，计划与维护复杂度高。
+* **频繁变更分区边界**：与统计/缓存/路由抖动共振。
+* **忽略 NULL/异常值**：NULL 的分区归属需明确定义，避免归到默认分区形成垃圾场。
+
+## 事务与一致性：分区层面的影响 {.smaller}
+
+* **单分区事务**最便宜（本地提交），应争取**绝大多数写**到单分区。
+* **跨分区事务**触发 2PC/MVCC 冲突与网络往返，评估**尾延迟**。
+* 分区重组中的可见性：SPLIT/MERGE/EXCHANGE 需保持**对外一致语义**，常以元操作的原子性实现。
+* 只读快照：配合分区做**窗口化报表**与**Follower Read**，明确**新鲜度界限**。
+
+
+# 分片
+
+## 水平扩展的必要性 {.smaller}
+
+* **纵向扩展（scale-up）**受限于单机 CPU/内存/IO，成本呈非线性
+* **水平扩展（scale-out）**按节点数近似线性扩展吞吐，但引入一致性、可用性、网络复杂度
+* **目标**：在分布式前提下，尽可能保持单机使用体验，即 ACID、SQL、可预测性能
+
+::: callout-important
+**PACELC回顾**：有分区（P）时在 **C/A** 间权衡；平时（ELSE）在 **延迟（L）/一致性（C）** 间权衡。分片策略影响两端权衡空间。
+:::
+
+::: callout-caution
+水平扩展不要和水平分区混淆。
+:::
+
+## 分片策略
+
+- Range 分片
+- Hash 分片
+- 复合分片
+
+## Range 分片
+
+- 按**有序主键**空间将键区间切为若干段 `[k_i, k_j)`，每段由**独立复制组**维护
+- **典型场景**：时间序日志/订单、范围查询/排序密集、冷热分层与滚动窗口
+- **优势**：范围查询/排序友好，可对“新旧数据”做差异化存储
+- **风险**：单调写入造成最新 Range 热点
+
+## 元信息到Leaseholder
+
+```{mermaid}
+flowchart LR
+  C[Client] --> M[Meta: key→range 映射缓存]
+  M -->|"k∈[R3)"| L3[Range R3 的 Leaseholder]
+  L3 --> F1[Follower 1]
+  L3 --> F2[Follower 2]
+  %% 命中缓存而直达租约持有者；缓存失效则回源查 meta
+```
+
+## Hash 分片
+
+* 对分片键取哈希后按**模数**或一致性哈希映射到桶（bucket）
+* **典型场景**：多租户均衡写、社交用户对象、Key-Value 单键点查
+* **优势**：天然负载均衡（键均匀前提下），**易于水平扩展**
+* **风险**：范围查询不友好，跨桶 JOIN/事务频率上升
+
+## Hash到桶再到副本组
+
+```{mermaid}
+flowchart LR
+  C[Client] --> H["hash(key)"]
+  H --> Bk[Bucket/虚拟节点]
+  Bk --> L[该桶的 Leaseholder]
+  L --> F1[Follower 1]
+  L --> F2[Follower 2]
+  %% 一致性哈希伸缩→迁移 vNode 子集而非整桶
+```
+
+## 复合/层级分片与二级索引
+
+* **复合策略**兼顾均衡与范围，例如 `tenant_id` 先 **Hash 分片**，分片内再按 `ts` 做 **Range**
+* **成本**：元数据与调度复杂度上升，再均衡需跨两层考虑
+
+## 路由与放置
+
+```{mermaid}
+flowchart LR
+  C[Client] --> H["Hash(tenant_id)"]
+  H --> Bk[Bucket/tenant-group]
+  Bk --> R1["Range(ts)#1"]
+  Bk --> R2["Range(ts)#2"]
+  %% 先落 tenant 组，再在组内按时间做 Range；读写可能只命中少数 Ranges
+```
+
+## 热点
+
+* **写热点**：顺序键（时间、自增 ID）、单租户/大客户流量倾斜、某一 SKU 秒杀
+* **读热点**：爆款对象被频繁读取（热门帖子、视频、配置）
+* 观测指标：**每Range QPS或写入字节、p99延迟、Leaseholder 分布、CPU/IO饱和度**
+
+## 再均衡手段 {.smaller}
+
+* **Split/Merge**：按阈值或预测切分/合并 Range，**缩小热点影响面**
+* **Move/Rebalance Replica**：把某个 Range 的副本/租约迁移到更空闲节点
+* **Leaseholder 转移**：把**读写调度权**迁到更接近流量的一侧，降低跨机跳数
+* **限流/排队**：对热点键或 Range 应用**背压**
+
+::: callout-note
+背压（backpressure）是指将输入转换为输出的过程受到某种阻碍。
+:::
+
+## Leaseholder 转移
+
+```{mermaid}
+sequenceDiagram
+  participant C as Client
+  participant LS as Leaseholder(节点A)
+  participant F1 as Follower(节点B)
+  participant F2 as Follower(节点C)
+
+  C->>LS: 高并发写入 k in [R1]
+  Note over LS: 触发阈值→分裂 R1 -> R1a + R1b
+  LS-->>F1: 复制新 Range 元数据
+  LS-->>F2: 复制新 Range 元数据
+  LS->>F1: 将 R1b 的 lease 转移到节点B
+  C->>F1: 后续键(k ∈ R1b)直达新 leaseholder
+```
+
+## 多 Raft/多组复制
+
+* **每个 Range 一个 Raft 复制组**，独立选主、独立日志、独立提交点
+* **Leaseholder** 承担**线性化读写入口**与时间戳/只读策略
+* **Split/Merge 是原子元操作**，对上层表现为一致性的**命名空间变更**
+* **元信息缓存**：路由层（DistSender/Router）按键进行 Range 映射
+
+## 写路径
+
+1. 客户端依据键查询**元信息**（Range 描述符），路由到目标 Range 的 **Leaseholder**
+2. **写入提案** → Raft 日志复制至多数派 → **提交**（commitIndex 前进）
+3. 返回写成功，后台可触发**意向清理或索引维护**等
+
+## 读路径
+
+* **强一致读**：读 Leaseholder 或带有只读租约的副本
+* **Follower Read**：允许**有界滞后**的只读副本服务读请求，换取延迟优势（以可配置的新鲜度界限为条件）
+
+::: callout-warning
+不同系统在术语与细节上有差异：是否允许 follower read、只读快照时间界限、租约与领导者角色是否合一等。本课程不纠结实现枝节。
+:::
+
+## 跨分片事务 {.smaller}
+
+* 代价来源多样：**协调冲突**（2PC/锁/MVCC） + **网络往返** + **写放大**（全局索引/意向清理）
+* 降低代价的思路：
+
+  * **分片键对齐冲突域**，让大多数事务落在单分片
+  * **确定性调度**，先定序后执行，减少在线协调
+  * **幂等写/去重键**，降低重试副作用
+
+::: callout-note
+一个幂等（idempotence）操作无论执行多少次都会返回同样的结果。
+:::
+
+## 分布式 JOIN {.smaller}
+
+* **本地化 JOIN**：提前把相关行**共置**（co-location）到同一分片
+* 把小表**广播**到大表所在分片
+* **重分区（repartition）**：按 JOIN 键把两边数据都重分片
+
+  - 网络代价高，慎用
+
+::: callout-note
+**经验法则**：
+
+- **COLOCATE JOIN**：若 `JOIN 键 = 分片键`，则倾向本地化，尤其是数据倾斜时；
+- **BROADCAST JOIN**：若一端远小，则广播小表；
+- **SHUFFLE JOIN**：都大且键不对齐，重分区（并行，代价可控）
+:::
+
+## 分片键设计 {.smaller}
+
+* **对齐冲突域**：红包ID/订单ID/会话ID/租户ID等天然聚合冲突的键
+* **避免单调写热点**：引入随机化后缀或哈希前缀，但权衡范围查询
+* **支持主路径查询**：分片键出现在主要过滤条件或 JOIN 键上
+* **考虑多维度**：必要时采用**层级分片**
+* **索引策略匹配**：全局索引与本地索引的写放大与查询代价平衡
+* **弹性演化**：能平滑增减桶、在线 split/merge/lease 转移
+
+# 案例
+
+## 例 1：订单表的分片策略 {.smaller}
+
+* **需求**：按 `tenant_id` 隔离大客户，支持近 30 天订单的**范围查询**与**报表聚合**
+* **方案**：Hash(`tenant_id`) → Range(`order_date`)
+* **预期**：
+
+  * 单租户局部热点被哈希分散
+  * 近 30 天范围查询命中有限数量 Range
+  * 跨租户聚合：倾向 **分布式聚合 → 汇总**
+* **风险**：全局索引写放大，跨租户 JOIN 代价升高
+* **缓解**：租户内本地索引＋异步汇总表
+
+## 例 2：红包系统的热点治理
+
+* 分片键 = 红包ID（**冲突域**）
+* 秒杀时**前台 split** + **租约转移**到就近节点
+* 失败重试路径加**幂等键**与**速率限制**
+* 对账报表走**异步流水**，不与在线交易抢锁
+
+# 练习与小测
+
+## 单选
+
+下列哪项最易导致**写热点**？
+
+A. Hash 分片 + 均匀键分布
+
+B. Range 分片 + 时间顺序写
+
+C. 广播 JOIN
+
+D. 重分区 JOIN
+
+
+## 判断
+
+`WHERE date_trunc('day', ts) = '2025-10-10'` 在多数系统中可被分区剪枝。
+
+## 判断
+
+Follower Read 一定能提供“读到最新写入”的一致性。
+
+
+## 简答
+
+为什么“分片键对齐冲突域”是首要原则？
+
+
+## 参考与延伸阅读
+
+Kleppmann, M. (2017). *Designing Data-Intensive Applications*. O'Reilly Media.
+
+## 下节预告
+
+* **第4讲：分布式事务与并发控制**
+
+  * 2PC / 乐观 vs 悲观 / MVCC
+  * 跨分片事务的冲突路径与代价
+  * **确定性事务** 与 “先定序后执行”
+
+# 附录
+
+## 租户的概念 {.smaller}
+
+租户（tenant）通常是一个“业务主体/组织单位”，它对自己的数据有隔离边界和独立运营需求。在订单域里，tenant_id 会写进每一条订单及其关联表，用来实现数据隔离、路由和授权。
+
+典型租户：
+
+- 电商平台（SaaS/商城型）：商家/店铺（shop_id / seller_id）
+- 外卖/到店平台：餐厅/门店（restaurant_id / store_id）
+- 支付/收单服务商：商户号（merchant_id）
+- 连锁/加盟体系：品牌-门店（brand_id / outlet_id）
+- 教育/SaaS 工具：学校/机构/工作区（school_id / workspace_id）
+
+> 谁对这批数据拥有业务主权、能配置规则、结算或权限，谁就是“租户”。
+
+## 表设计示例 {.smaller}
+
+**目标**：请求按 tenant_id 路由到“同一分片/租户组”，让绝大多数事务进到单组，读写都能本地化。
+
+```sql
+-- 订单主表
+CREATE TABLE orders (
+  tenant_id     BIGINT NOT NULL,                -- 租户/商户/门店
+  order_id      BIGINT NOT NULL,                -- 在租户域唯一，或全局唯一
+  user_id       BIGINT NOT NULL,
+  order_date    TIMESTAMP NOT NULL,
+  status        SMALLINT NOT NULL,
+  amount_cents  BIGINT NOT NULL,
+  PRIMARY KEY (tenant_id, order_id)             -- 复合主键：先租户，再订单
+);
+
+-- 常用查询索引（可本地索引）
+CREATE INDEX idx_orders_tenant_date
+  ON orders (tenant_id, order_date);
+```
+## 全局可追踪 ID 设计 {.smaller}
+
+ID 设计目标
+
+- **全局唯一**：跨服务、跨分片不碰撞  
+- **时间有序**：ID 随时间递增，便于**日志排序、区间查询**  
+- **本地生成**：无中心协调或仅少量元数据（worker id），**低延迟高吞吐**  
+- **可追踪性**：从 ID 中**读出时间**（及可选的机房/节点），帮助**定位与回放**
+
+**经典 64 位 Snowflake**
+
+```
+bit:  [63] [62..................................22][21........12][11........0]
+      sign         timestamp (ms since epoch)       worker id        sequence
+```
+
+**128 位 ULID**
+
+```
+ULID = time(48b) || randomness(80b)
+Base32("time+rand") -> 26 chars, e.g. 01J9YH8S2V4MZXA3RQP7B1K6TN
+```

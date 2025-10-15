@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<script src="slide04_files/libs/clipboard/clipboard.min.js"></script>
+<script src="slide04_files/libs/quarto-html/tabby.min.js"></script>
+<script src="slide04_files/libs/quarto-html/popper.min.js"></script>
+<script src="slide04_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="slide04_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="slide04_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="slide04_files/libs/quarto-html/quarto-syntax-highlighting-ea385d0e468b0dd5ea5bf0780b1290d9.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.7.33">
+
+  <meta name="author" content="叶鸿">
+  <meta name="dcterms.date" content="2025-10-11">
+  <title>分布式数据库开发</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="slide04_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="slide04_files/libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      { color: #003b4f; background-color: #f1f3f5; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #003b4f; } /* Normal */
+    code span.al { color: #ad0000; } /* Alert */
+    code span.an { color: #5e5e5e; } /* Annotation */
+    code span.at { color: #657422; } /* Attribute */
+    code span.bn { color: #ad0000; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #20794d; } /* Char */
+    code span.cn { color: #8f5902; } /* Constant */
+    code span.co { color: #5e5e5e; } /* Comment */
+    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
+    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
+    code span.dt { color: #ad0000; } /* DataType */
+    code span.dv { color: #ad0000; } /* DecVal */
+    code span.er { color: #ad0000; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #ad0000; } /* Float */
+    code span.fu { color: #4758ab; } /* Function */
+    code span.im { color: #00769e; } /* Import */
+    code span.in { color: #5e5e5e; } /* Information */
+    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
+    code span.op { color: #5e5e5e; } /* Operator */
+    code span.ot { color: #003b4f; } /* Other */
+    code span.pp { color: #ad0000; } /* Preprocessor */
+    code span.sc { color: #5e5e5e; } /* SpecialChar */
+    code span.ss { color: #20794d; } /* SpecialString */
+    code span.st { color: #20794d; } /* String */
+    code span.va { color: #111111; } /* Variable */
+    code span.vs { color: #20794d; } /* VerbatimString */
+    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="slide04_files/libs/revealjs/dist/theme/quarto-f563837468303362081e247dddd440d0.css">
+  <link href="slide04_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="slide04_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="slide04_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="slide04_files/libs/revealjs/plugin/reveal-chalkboard/font-awesome/css/all.css" rel="stylesheet">
+  <link href="slide04_files/libs/revealjs/plugin/reveal-chalkboard/style.css" rel="stylesheet">
+  <link href="slide04_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+  <script src="slide04_files/libs/quarto-diagram/mermaid-postprocess-shim.js"></script>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">分布式数据库开发</h1>
+  <p class="subtitle">第3讲：分区与分片</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+叶鸿 
+</div>
+</div>
+</div>
+
+  <p class="date">2025-10-11</p>
+</section>
+<section id="本讲学习目标" class="slide level2 smaller">
+<h2>本讲学习目标</h2>
+<ul>
+<li>理解<strong>分区（partition）</strong>和<strong>分片（shard）</strong>的概念</li>
+<li>了解常见分区和分片的类型，并能够针对案例做出分析</li>
+<li>识别<strong>热点（hotspot）</strong>成因，理解<strong>分裂（split）、合并（merge）、迁移（rebalance）</strong> 的策略<br>
+</li>
+<li>建立“<strong>多Raft/多组复制</strong>”的心智模型</li>
+<li>能根据业务冲突域设计<strong>分片键（shard key）</strong>，并预判对事务、JOIN、代价模型的影响</li>
+</ul>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p>后续多处将使用<strong>Range/Region</strong>表示一段连续主键空间的分片单位；它们通常由<strong>独立的 Raft 复制组</strong>维护，具备自治的<strong>领导者</strong>与<strong>多数派提交</strong>机制。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="术语对比" class="slide level2 smaller">
+<h2>术语对比</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>分区（Partition）</th>
+<th>分片（Shard）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>目的</strong></td>
+<td>剪枝扫描、并行执行、生命周期运维统计信息分区化。</td>
+<td>水平扩展、容灾高可用、热点治理、在线迁移/再均衡。</td>
+</tr>
+<tr class="even">
+<td><strong>颗粒</strong></td>
+<td>表内的<strong>逻辑</strong>子集合（RANGE/LIST/HASH/子分区）；单机与分布式系统都适用</td>
+<td>可独立放置/迁移/复制的<strong>物理</strong>单元（Region/Tablet/Range 等）；常由共识组管理</td>
+</tr>
+<tr class="odd">
+<td><strong>语义</strong></td>
+<td>影响SQL层可剪枝性、分区统计、分区对分区并行Join、局部/全局索引</td>
+<td>影响路由/复制/一致读/写提案/lease转移/分裂合并等运行时行为</td>
+</tr>
+<tr class="even">
+<td><strong>位置</strong></td>
+<td>逻辑模式与优化器关注点，是否落到哪个节点并非它的职责</td>
+<td>存储与调度关注点，直接决定读写路径与网络代价</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="两者的关系" class="slide level2">
+<h2>两者的关系</h2>
+<ul>
+<li>一个“分区”（逻辑）可以映射到一个或多个分片（物理）</li>
+<li>一个分片也可能同时承载多个小分区的数据块</li>
+<li>两者既可对齐，也可彼此独立演化</li>
+</ul>
+</section>
+<section>
+<section id="分区" class="title-slide slide level1 center">
+<h1>分区</h1>
+
+</section>
+<section id="概念与作用" class="slide level2 smaller">
+<h2>概念与作用</h2>
+<ul>
+<li>从表内维度看，将一张<strong>逻辑上单一</strong>的表按某个键或表达式<strong>切分为多个子区段</strong>（分区/分区表），每个分区通常有<strong>独立的存储与元数据</strong>。</li>
+<li><strong>目的</strong>：
+<ul>
+<li>性能：分区<strong>剪枝</strong>（pruning）减少扫描范围，并行执行</li>
+<li>运维：按分区做<strong>滚动删除、归档、冷热分层</strong>，降低维护成本</li>
+<li>可用性：分区级恢复和重建，分布式系统中与副本或租约搭配</li>
+</ul></li>
+</ul>
+</section>
+<section id="逻辑分区-vs-物理分布" class="slide level2 smaller">
+<h2>逻辑分区 vs 物理分布</h2>
+<ul>
+<li><strong>逻辑层</strong>（SQL/优化器）定义分区键、边界、约束，查询时使用<strong>分区剪枝</strong>与<strong>分区统计信息</strong>。</li>
+<li><strong>物理层</strong>（存储/复制/路由）每个分区可能对应<strong>独立的数据文件或对象</strong>，在分布式系统中进一步映射到<strong>Range/Region</strong>，由<strong>Raft或Paxos</strong>等复制。</li>
+<li>常见映射：
+<ul>
+<li><strong>1:1</strong>：一个分区 ≈ 一个 Range/Region，简单清晰</li>
+<li><strong>1:N</strong>：大分区进一步被自动split为多个 Range，避免单分区过大或热点</li>
+<li><strong>N:1</strong>：多个小分区在物理上同驻，出现在小表或合并策略</li>
+</ul></li>
+</ul>
+</section>
+<section id="一种常见的映射图示" class="slide level2">
+<h2>一种常见的映射图示</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg aria-roledescription="flowchart-v2" role="graphics-document document" viewbox="0 0 888.125 278" style="; display: block; margin: auto auto auto auto" class="flowchart" xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="960" id="mermaid-figure-1" height="480">
+<style>#mermaid-figure-1{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#mermaid-figure-1 .error-icon{fill:#552222;}#mermaid-figure-1 .error-text{fill:#552222;stroke:#552222;}#mermaid-figure-1 .edge-thickness-normal{stroke-width:1px;}#mermaid-figure-1 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-figure-1 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-figure-1 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-figure-1 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-figure-1 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-figure-1 .marker{fill:#333333;stroke:#333333;}#mermaid-figure-1 .marker.cross{stroke:#333333;}#mermaid-figure-1 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#mermaid-figure-1 p{margin:0;}#mermaid-figure-1 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#333;}#mermaid-figure-1 .cluster-label text{fill:#333;}#mermaid-figure-1 .cluster-label span{color:#333;}#mermaid-figure-1 .cluster-label span p{background-color:transparent;}#mermaid-figure-1 .label text,#mermaid-figure-1 span{fill:#333;color:#333;}#mermaid-figure-1 .node rect,#mermaid-figure-1 .node circle,#mermaid-figure-1 .node ellipse,#mermaid-figure-1 .node polygon,#mermaid-figure-1 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#mermaid-figure-1 .rough-node .label text,#mermaid-figure-1 .node .label text{text-anchor:middle;}#mermaid-figure-1 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-figure-1 .node .label{text-align:center;}#mermaid-figure-1 .node.clickable{cursor:pointer;}#mermaid-figure-1 .arrowheadPath{fill:#333333;}#mermaid-figure-1 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#mermaid-figure-1 .flowchart-link{stroke:#333333;fill:none;}#mermaid-figure-1 .edgeLabel{background-color:rgba(232,232,232, 0.8);text-align:center;}#mermaid-figure-1 .edgeLabel p{background-color:rgba(232,232,232, 0.8);}#mermaid-figure-1 .edgeLabel rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#mermaid-figure-1 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#mermaid-figure-1 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#mermaid-figure-1 .cluster text{fill:#333;}#mermaid-figure-1 .cluster span{color:#333;}#mermaid-figure-1 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#mermaid-figure-1 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#mermaid-figure-1 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style>
+<g><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559478_flowchart-v2-pointEnd"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z"></path></marker><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="4.5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559478_flowchart-v2-pointStart"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="11" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559478_flowchart-v2-circleEnd"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="-1" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559478_flowchart-v2-circleStart"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="12" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527559478_flowchart-v2-crossEnd"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="-1" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527559478_flowchart-v2-crossStart"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"><path marker-end="url(#mermaid-1760527559478_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_T_P1_0" d="M498.273,44.181L450.816,51.318C403.359,58.454,308.445,72.727,260.988,81.947C213.531,91.167,213.531,95.333,213.531,98.833C213.531,102.333,213.531,105.167,213.531,106.583L213.531,108"></path><path marker-end="url(#mermaid-1760527559478_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_T_P2_1" d="M559.328,62L559.328,66.167C559.328,70.333,559.328,78.667,559.328,84.917C559.328,91.167,559.328,95.333,559.328,98.833C559.328,102.333,559.328,105.167,559.328,106.583L559.328,108"></path><path marker-end="url(#mermaid-1760527559478_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_T_P3_2" d="M620.383,48.772L648.629,55.143C676.875,61.515,733.367,74.257,761.613,82.712C789.859,91.167,789.859,95.333,789.859,98.833C789.859,102.333,789.859,105.167,789.859,106.583L789.859,108"></path><path marker-end="url(#mermaid-1760527559478_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_P1_R1_3" d="M156.461,164.746L146.762,169.122C137.063,173.497,117.664,182.249,107.965,188.708C98.266,195.167,98.266,199.333,98.266,202.833C98.266,206.333,98.266,209.167,98.266,210.583L98.266,212"></path><path marker-end="url(#mermaid-1760527559478_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_P1_R2_4" d="M270.602,164.746L280.301,169.122C290,173.497,309.398,182.249,319.098,188.708C328.797,195.167,328.797,199.333,328.797,202.833C328.797,206.333,328.797,209.167,328.797,210.583L328.797,212"></path><path marker-end="url(#mermaid-1760527559478_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_P2_R3_5" d="M559.328,166L559.328,170.167C559.328,174.333,559.328,182.667,559.328,188.917C559.328,195.167,559.328,199.333,559.328,202.833C559.328,206.333,559.328,209.167,559.328,210.583L559.328,212"></path><path marker-end="url(#mermaid-1760527559478_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_P3_R4_6" d="M789.859,166L789.859,170.167C789.859,174.333,789.859,182.667,789.859,188.917C789.859,195.167,789.859,199.333,789.859,202.833C789.859,206.333,789.859,209.167,789.859,210.583L789.859,212"></path></g><g class="edgeLabels"><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g></g><g class="nodes"><g transform="translate(559.328125, 35)" id="flowchart-T-0" class="node default"><rect height="54" width="122.109375" y="-27" x="-61.0546875" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-31.0546875, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="62.109375">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+逻辑表 T
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(213.53125, 139)" id="flowchart-P1-1" class="node default"><rect height="54" width="114.140625" y="-27" x="-57.0703125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-27.0703125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="54.140625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+分区 P1
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(559.328125, 139)" id="flowchart-P2-3" class="node default"><rect height="54" width="114.140625" y="-27" x="-57.0703125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-27.0703125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="54.140625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+分区 P2
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(789.859375, 139)" id="flowchart-P3-5" class="node default"><rect height="54" width="114.140625" y="-27" x="-57.0703125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-27.0703125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="54.140625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+分区 P3
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(98.265625, 243)" id="flowchart-R1-7" class="node default"><rect height="54" width="180.53125" y="-27" x="-90.265625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-60.265625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="120.53125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Range/Region #1
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(328.796875, 243)" id="flowchart-R2-9" class="node default"><rect height="54" width="180.53125" y="-27" x="-90.265625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-60.265625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="120.53125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Range/Region #2
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(559.328125, 243)" id="flowchart-R3-11" class="node default"><rect height="54" width="180.53125" y="-27" x="-90.265625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-60.265625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="120.53125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Range/Region #3
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(789.859375, 243)" id="flowchart-R4-13" class="node default"><rect height="54" width="180.53125" y="-27" x="-90.265625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-60.265625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="120.53125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Range/Region #4
+</p>
+</span>
+</div>
+</foreignobject></g></g></g></g></g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="分区类型" class="slide level2 smaller">
+<h2>分区类型</h2>
+<ul>
+<li><strong>RANGE 分区</strong>：按<strong>有序区间</strong>划分，常见于时间/数值/前缀。</li>
+<li><strong>LIST 分区</strong>：按<strong>离散集合</strong>划分，常见于国家/省份/类别。</li>
+<li><strong>HASH 分区</strong>：按表达式哈希分桶（均衡写入但牺牲范围友好）。</li>
+<li><strong>复合分区/子分区</strong>：外层（如 HASH/列表）+ 内层（如 RANGE），兼顾均匀与范围。</li>
+<li><strong>表达式分区</strong>：对派生列或函数结果分区（需注意可剪枝性与可计算性）。</li>
+</ul>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>提示</strong></p>
+</div>
+<div class="callout-content">
+<p>选择分区类型的<strong>核心问题</strong>：你的<strong>主路径查询</strong>与<strong>生命周期运维</strong>如何进行？例如：</p>
+<ul>
+<li>按月删旧 → RANGE</li>
+<li>多租户隔离 → HASH/LIST</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<section id="range-分区的语义与示例" class="slide level2 smaller">
+<h2>RANGE 分区的语义与示例</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode numberSource sql number-lines code-with-copy"><code class="sourceCode sql"><span id="cb1-1"><a href=""></a><span class="co">-- 以 order_date 做 RANGE 分区</span></span>
+<span id="cb1-2"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> orders (</span>
+<span id="cb1-3"><a href=""></a>  order_id   BIGINT <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb1-4"><a href=""></a>  tenant_id  BIGINT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-5"><a href=""></a>  order_date <span class="dt">DATE</span>   <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb1-6"><a href=""></a>  amount     <span class="dt">DECIMAL</span>(<span class="dv">12</span>,<span class="dv">2</span>) <span class="kw">NOT</span> <span class="kw">NULL</span></span>
+<span id="cb1-7"><a href=""></a>) <span class="kw">PARTITION</span> <span class="kw">BY</span> <span class="kw">RANGE</span> (order_date);</span>
+<span id="cb1-8"><a href=""></a></span>
+<span id="cb1-9"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> orders_2025_10 <span class="kw">PARTITION</span> <span class="kw">OF</span> orders</span>
+<span id="cb1-10"><a href=""></a>  <span class="cf">FOR</span> <span class="kw">VALUES</span> <span class="kw">FROM</span> (<span class="st">'2025-10-01'</span>) <span class="kw">TO</span> (<span class="st">'2025-11-01'</span>);</span>
+<span id="cb1-11"><a href=""></a></span>
+<span id="cb1-12"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> orders_2025_11 <span class="kw">PARTITION</span> <span class="kw">OF</span> orders</span>
+<span id="cb1-13"><a href=""></a>  <span class="cf">FOR</span> <span class="kw">VALUES</span> <span class="kw">FROM</span> (<span class="st">'2025-11-01'</span>) <span class="kw">TO</span> (<span class="st">'2025-12-01'</span>);</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><strong>优点</strong>：范围查询和汇总友好，按月/周<strong>滚动窗口</strong>易运维</li>
+<li><strong>风险</strong>：时间序写入导致<strong>最新分区写热点</strong>，需搭配<strong>前台 split/租约迁移/速率限制</strong>使用</li>
+</ul>
+</section>
+<section id="list-分区的语义与示例" class="slide level2 smaller">
+<h2>LIST 分区的语义与示例</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode numberSource sql number-lines code-with-copy"><code class="sourceCode sql"><span id="cb2-1"><a href=""></a><span class="co">-- 按国家代码 做 LIST 分区</span></span>
+<span id="cb2-2"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> customers (</span>
+<span id="cb2-3"><a href=""></a>  customer_id  BIGINT <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb2-4"><a href=""></a>  country_code TEXT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb2-5"><a href=""></a>  created_at   <span class="dt">TIMESTAMP</span> <span class="kw">NOT</span> <span class="kw">NULL</span></span>
+<span id="cb2-6"><a href=""></a>) <span class="kw">PARTITION</span> <span class="kw">BY</span> <span class="kw">LIST</span> (country_code);</span>
+<span id="cb2-7"><a href=""></a></span>
+<span id="cb2-8"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> customers_cn <span class="kw">PARTITION</span> <span class="kw">OF</span> customers <span class="cf">FOR</span> <span class="kw">VALUES</span> <span class="kw">IN</span> (<span class="st">'CN'</span>);</span>
+<span id="cb2-9"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> customers_us <span class="kw">PARTITION</span> <span class="kw">OF</span> customers <span class="cf">FOR</span> <span class="kw">VALUES</span> <span class="kw">IN</span> (<span class="st">'US'</span>);</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>LIST 易表达<strong>离散集合</strong>，集合变化需要<strong>维护元数据</strong></li>
+</ul>
+</section>
+<section id="hash-分区的语义与示例" class="slide level2 smaller">
+<h2>HASH 分区的语义与示例</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode numberSource sql number-lines code-with-copy"><code class="sourceCode sql"><span id="cb3-1"><a href=""></a><span class="co">-- 按租户 ID 做 HASH 分区</span></span>
+<span id="cb3-2"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> <span class="kw">events</span> (</span>
+<span id="cb3-3"><a href=""></a>  event_id BIGINT <span class="kw">PRIMARY</span> <span class="kw">KEY</span>,</span>
+<span id="cb3-4"><a href=""></a>  tenant_id BIGINT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb3-5"><a href=""></a>  ts <span class="dt">TIMESTAMP</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb3-6"><a href=""></a>  payload JSONB</span>
+<span id="cb3-7"><a href=""></a>) <span class="kw">PARTITION</span> <span class="kw">BY</span> <span class="kw">HASH</span> (tenant_id);</span>
+<span id="cb3-8"><a href=""></a></span>
+<span id="cb3-9"><a href=""></a><span class="co">-- N 个桶</span></span>
+<span id="cb3-10"><a href=""></a><span class="co">-- 例如：PARTITIONS 8（TiDB/MySQL 风格），或显式创建 bucket_0..7（Postgres 风格）</span></span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>HASH 能对抗倾斜，但<strong>范围查询不友好</strong>，此外桶数变化涉及<strong>重分布</strong>策略</li>
+</ul>
+</section>
+<section id="复合子分区" class="slide level2 smaller">
+<h2>复合/子分区</h2>
+<ul>
+<li><p>兼顾均匀与范围</p></li>
+<li><p><strong>场景</strong>：多租户 + 时间序分析</p>
+<ul>
+<li>外层：<code>HASH(tenant_id)</code> → 将大租户写均匀散出</li>
+<li>内层：<code>RANGE(order_date)</code> → 便于<strong>近月查询</strong>与<strong>滚动归档</strong></li>
+</ul></li>
+</ul>
+<div class="sourceCode" id="cb4"><pre class="sourceCode numberSource sql number-lines code-with-copy"><code class="sourceCode sql"><span id="cb4-1"><a href=""></a><span class="co">-- 伪语法：不同系统的子分区定义略有差异</span></span>
+<span id="cb4-2"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> orders (</span>
+<span id="cb4-3"><a href=""></a>  order_id BIGINT,</span>
+<span id="cb4-4"><a href=""></a>  tenant_id BIGINT,</span>
+<span id="cb4-5"><a href=""></a>  order_date <span class="dt">DATE</span>,</span>
+<span id="cb4-6"><a href=""></a>  <span class="op">..</span>.</span>
+<span id="cb4-7"><a href=""></a>) <span class="kw">PARTITION</span> <span class="kw">BY</span> <span class="kw">HASH</span> (tenant_id) <span class="kw">SUBPARTITION</span> <span class="kw">BY</span> <span class="kw">RANGE</span> (order_date);</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>注意：子分区层级越多，元数据与优化器<strong>复杂度上升</strong>，只在<strong>明确收益</strong>时采用</li>
+</ul>
+</section>
+<section id="分区剪枝与谓词可剪枝性" class="slide level2 smaller">
+<h2>分区剪枝与谓词可剪枝性</h2>
+<ul>
+<li><p>优化器根据查询谓词<strong>静态/动态</strong>情况，判断只访问相关分区，减少 I/O 开销。</p></li>
+<li><p><strong>生效条件</strong>：</p>
+<ul>
+<li>谓词<strong>可表达为分区边界上的约束</strong>，如 <code>order_date BETWEEN ...</code></li>
+<li>表达式<strong>可下推且可计算</strong>，避免复杂函数或隐式类型转换导致不可剪枝</li>
+</ul></li>
+</ul>
+</section>
+<section id="谓词可剪枝性示例" class="slide level2 smaller">
+<h2>谓词可剪枝性示例</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode numberSource sql number-lines code-with-copy"><code class="sourceCode sql"><span id="cb5-1"><a href=""></a><span class="co">-- 能剪枝：仅扫描 2025-10 分区</span></span>
+<span id="cb5-2"><a href=""></a><span class="kw">SELECT</span> <span class="fu">sum</span>(amount)</span>
+<span id="cb5-3"><a href=""></a><span class="kw">FROM</span> orders</span>
+<span id="cb5-4"><a href=""></a><span class="kw">WHERE</span> order_date <span class="op">&gt;=</span> <span class="st">'2025-10-01'</span> <span class="kw">AND</span> order_date <span class="op">&lt;</span> <span class="st">'2025-11-01'</span>;</span>
+<span id="cb5-5"><a href=""></a></span>
+<span id="cb5-6"><a href=""></a><span class="co">-- 可能无法剪枝（取决于系统的表达式下推/常量折叠能力）</span></span>
+<span id="cb5-7"><a href=""></a><span class="kw">SELECT</span> <span class="fu">sum</span>(amount)</span>
+<span id="cb5-8"><a href=""></a><span class="kw">FROM</span> orders</span>
+<span id="cb5-9"><a href=""></a><span class="kw">WHERE</span> date_trunc(<span class="st">'month'</span>, order_date) <span class="op">=</span> <span class="dt">date</span> <span class="st">'2025-10-01'</span>;</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>警告</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>反模式</strong>：在查询中对分区键做复杂函数/隐式类型转换（如把 <code>DATE</code> 转成 <code>TEXT</code> 比较），可能使优化器<strong>放弃剪枝</strong>。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="分区统计信息与优化器选择" class="slide level2 smaller">
+<h2>分区统计信息与优化器选择</h2>
+<ul>
+<li><strong>分区级统计</strong>：每个分区维护<strong>行数/直方图/最值</strong>，提高选择率估计精度。</li>
+<li><strong>全局统计</strong>：优化器需要<strong>全局视图</strong>以决定<strong>连接顺序</strong>与<strong>并行度</strong>。</li>
+<li><strong>代价模型</strong>：扫描分区数、跨分区数据移动、索引类型（本地/全局）都会影响计划。</li>
+</ul>
+</section>
+<section id="本地索引-vs-全局索引" class="slide level2 smaller">
+<h2>本地索引 vs 全局索引</h2>
+<ul>
+<li><p><strong>本地索引（Local Index）</strong>：每个分区单独维护索引，<strong>写便宜</strong>，查询需跨分区<strong>多跳</strong>。</p></li>
+<li><p><strong>全局索引（Global Index）</strong>：全表统一索引空间，<strong>查找友好</strong>，写入可能<strong>放大</strong>（跨分区维护）。</p></li>
+<li><p>实践建议：</p>
+<ul>
+<li><strong>主路径查询</strong>优先保证能<strong>剪枝 + 命中本地索引</strong>。</li>
+<li>跨分区访问频繁场景下，<strong>谨慎引入全局索引</strong>并评估写代价与一致性。</li>
+</ul></li>
+</ul>
+</section>
+<section id="分区对分区并行" class="slide level2 smaller">
+<h2>分区对分区并行</h2>
+<ul>
+<li><p>若两个表按相同表达式或边界分区（或可对齐映射），等值连接可<strong>分区对分区</strong>并行（Partition-wise Join），无需重分区。</p></li>
+<li><p><strong>条件</strong>：</p>
+<ul>
+<li>分区键对齐（同一键或可以单调映射的情况）</li>
+<li>分区数量或边界一致（或可归并到一致）</li>
+</ul></li>
+<li><p><strong>收益</strong>：减少数据移动，利用并行度获取近线性加速。</p></li>
+</ul>
+</section>
+<section id="分区对分区并行图示" class="slide level2">
+<h2>分区对分区并行：图示</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg aria-roledescription="flowchart-v2" role="graphics-document document" viewbox="0 0 359.453125 278" style="; display: block; margin: auto auto auto auto" class="flowchart" xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="960" id="mermaid-figure-7" height="480">
+<style>#mermaid-figure-7{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#mermaid-figure-7 .error-icon{fill:#552222;}#mermaid-figure-7 .error-text{fill:#552222;stroke:#552222;}#mermaid-figure-7 .edge-thickness-normal{stroke-width:1px;}#mermaid-figure-7 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-figure-7 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-figure-7 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-figure-7 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-figure-7 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-figure-7 .marker{fill:#333333;stroke:#333333;}#mermaid-figure-7 .marker.cross{stroke:#333333;}#mermaid-figure-7 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#mermaid-figure-7 p{margin:0;}#mermaid-figure-7 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#333;}#mermaid-figure-7 .cluster-label text{fill:#333;}#mermaid-figure-7 .cluster-label span{color:#333;}#mermaid-figure-7 .cluster-label span p{background-color:transparent;}#mermaid-figure-7 .label text,#mermaid-figure-7 span{fill:#333;color:#333;}#mermaid-figure-7 .node rect,#mermaid-figure-7 .node circle,#mermaid-figure-7 .node ellipse,#mermaid-figure-7 .node polygon,#mermaid-figure-7 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#mermaid-figure-7 .rough-node .label text,#mermaid-figure-7 .node .label text{text-anchor:middle;}#mermaid-figure-7 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-figure-7 .node .label{text-align:center;}#mermaid-figure-7 .node.clickable{cursor:pointer;}#mermaid-figure-7 .arrowheadPath{fill:#333333;}#mermaid-figure-7 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#mermaid-figure-7 .flowchart-link{stroke:#333333;fill:none;}#mermaid-figure-7 .edgeLabel{background-color:rgba(232,232,232, 0.8);text-align:center;}#mermaid-figure-7 .edgeLabel p{background-color:rgba(232,232,232, 0.8);}#mermaid-figure-7 .edgeLabel rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#mermaid-figure-7 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#mermaid-figure-7 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#mermaid-figure-7 .cluster text{fill:#333;}#mermaid-figure-7 .cluster span{color:#333;}#mermaid-figure-7 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#mermaid-figure-7 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#mermaid-figure-7 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style>
+<g><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560309_flowchart-v2-pointEnd"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z"></path></marker><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="4.5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560309_flowchart-v2-pointStart"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="11" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560309_flowchart-v2-circleEnd"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="-1" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560309_flowchart-v2-circleStart"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="12" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527560309_flowchart-v2-crossEnd"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="-1" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527560309_flowchart-v2-crossStart"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"><path marker-end="url(#mermaid-1760527560309_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_A1_B1_0" d="M121.453,35L131.198,35C140.943,35,160.432,35,175.049,35C189.667,35,199.411,35,208.49,35C217.568,35,225.979,35,230.185,35L234.391,35"></path><path marker-end="url(#mermaid-1760527560309_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_A2_B2_1" d="M121.453,139L131.198,139C140.943,139,160.432,139,175.049,139C189.667,139,199.411,139,208.49,139C217.568,139,225.979,139,230.185,139L234.391,139"></path><path marker-end="url(#mermaid-1760527560309_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_A3_B3_2" d="M121.453,243L131.198,243C140.943,243,160.432,243,175.049,243C189.667,243,199.411,243,208.49,243C217.568,243,225.979,243,230.185,243L234.391,243"></path></g><g class="edgeLabels"><g transform="translate(179.921875, 35)" class="edgeLabel"><g transform="translate(-33.46875, -12)" class="label"><foreignobject height="24" width="66.9375">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel">
+<p>
+local join
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(179.921875, 139)" class="edgeLabel"><g transform="translate(-33.46875, -12)" class="label"><foreignobject height="24" width="66.9375">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel">
+<p>
+local join
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(179.921875, 243)" class="edgeLabel"><g transform="translate(-33.46875, -12)" class="label"><foreignobject height="24" width="66.9375">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel">
+<p>
+local join
+</p>
+</span>
+</div>
+</foreignobject></g></g></g><g class="nodes"><g transform="translate(64.7265625, 35)" id="flowchart-A1-0" class="node default"><rect height="54" width="113.453125" y="-27" x="-56.7265625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-26.7265625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="53.453125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+表A: P1
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(294.921875, 35)" id="flowchart-B1-1" class="node default"><rect height="54" width="113.0625" y="-27" x="-56.53125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-26.53125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="53.0625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+表B: P1
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(64.7265625, 139)" id="flowchart-A2-2" class="node default"><rect height="54" width="113.453125" y="-27" x="-56.7265625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-26.7265625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="53.453125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+表A: P2
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(294.921875, 139)" id="flowchart-B2-3" class="node default"><rect height="54" width="113.0625" y="-27" x="-56.53125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-26.53125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="53.0625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+表B: P2
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(64.7265625, 243)" id="flowchart-A3-4" class="node default"><rect height="54" width="113.453125" y="-27" x="-56.7265625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-26.7265625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="53.453125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+表A: P3
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(294.921875, 243)" id="flowchart-B3-5" class="node default"><rect height="54" width="113.0625" y="-27" x="-56.53125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-26.53125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="53.0625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+表B: P3
+</p>
+</span>
+</div>
+</foreignobject></g></g></g></g></g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="分区生命周期管理" class="slide level2 smaller">
+<h2>分区生命周期管理</h2>
+<ul>
+<li><p><strong>常规操作</strong>：</p>
+<ul>
+<li><code>ADD/ATTACH PARTITION</code>：上线新窗口，如新月份</li>
+<li><code>DROP/DETACH/TRUNCATE PARTITION</code>：快速删除/清空旧数据</li>
+<li><code>SPLIT/MERGE</code>：动态调节分区粒度，部分系统以 Range/Region 层实现</li>
+<li><code>EXCHANGE PARTITION</code>：与同构表<strong>原位交换</strong>，零拷贝归档/回灌</li>
+</ul></li>
+<li><p><strong>滚动窗口（rolling window）</strong>：</p>
+<ul>
+<li>预建未来 N 个分区，到期自动 detach/drop 旧分区</li>
+<li><strong>存活时间（Time to live, TTL）</strong>按时间自动过期，可作为细粒度补充</li>
+</ul></li>
+<li><p><strong>冷热分层</strong>：新数据留在<strong>高性能存储</strong>，旧分区迁往<strong>便宜存储</strong>（对象存储或冷盘）</p></li>
+</ul>
+</section>
+<section id="数据生命周期" class="slide level2">
+<h2>数据生命周期</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg aria-roledescription="gantt" role="graphics-document document" style="; display: block; margin: auto auto auto auto" viewbox="0 0 740 172" xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="960" id="mermaid-figure-6" height="480">
+<style>#mermaid-figure-6{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#mermaid-figure-6 .error-icon{fill:#552222;}#mermaid-figure-6 .error-text{fill:#552222;stroke:#552222;}#mermaid-figure-6 .edge-thickness-normal{stroke-width:1px;}#mermaid-figure-6 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-figure-6 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-figure-6 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-figure-6 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-figure-6 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-figure-6 .marker{fill:#333333;stroke:#333333;}#mermaid-figure-6 .marker.cross{stroke:#333333;}#mermaid-figure-6 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#mermaid-figure-6 p{margin:0;}#mermaid-figure-6 .mermaid-main-font{font-family:var(--mermaid-font-family, "trebuchet ms", verdana, arial, sans-serif);}#mermaid-figure-6 .exclude-range{fill:#eeeeee;}#mermaid-figure-6 .section{stroke:none;opacity:0.2;}#mermaid-figure-6 .section0{fill:rgba(102, 102, 255, 0.49);}#mermaid-figure-6 .section2{fill:#fff400;}#mermaid-figure-6 .section1,#mermaid-figure-6 .section3{fill:white;opacity:0.2;}#mermaid-figure-6 .sectionTitle0{fill:#333;}#mermaid-figure-6 .sectionTitle1{fill:#333;}#mermaid-figure-6 .sectionTitle2{fill:#333;}#mermaid-figure-6 .sectionTitle3{fill:#333;}#mermaid-figure-6 .sectionTitle{text-anchor:start;font-family:var(--mermaid-font-family, "trebuchet ms", verdana, arial, sans-serif);}#mermaid-figure-6 .grid .tick{stroke:lightgrey;opacity:0.8;shape-rendering:crispEdges;}#mermaid-figure-6 .grid .tick text{font-family:"trebuchet ms",verdana,arial,sans-serif;fill:#333;}#mermaid-figure-6 .grid path{stroke-width:0;}#mermaid-figure-6 .today{fill:none;stroke:red;stroke-width:2px;}#mermaid-figure-6 .task{stroke-width:2;}#mermaid-figure-6 .taskText{text-anchor:middle;font-family:var(--mermaid-font-family, "trebuchet ms", verdana, arial, sans-serif);}#mermaid-figure-6 .taskTextOutsideRight{fill:black;text-anchor:start;font-family:var(--mermaid-font-family, "trebuchet ms", verdana, arial, sans-serif);}#mermaid-figure-6 .taskTextOutsideLeft{fill:black;text-anchor:end;}#mermaid-figure-6 .task.clickable{cursor:pointer;}#mermaid-figure-6 .taskText.clickable{cursor:pointer;fill:#003163!important;font-weight:bold;}#mermaid-figure-6 .taskTextOutsideLeft.clickable{cursor:pointer;fill:#003163!important;font-weight:bold;}#mermaid-figure-6 .taskTextOutsideRight.clickable{cursor:pointer;fill:#003163!important;font-weight:bold;}#mermaid-figure-6 .taskText0,#mermaid-figure-6 .taskText1,#mermaid-figure-6 .taskText2,#mermaid-figure-6 .taskText3{fill:white;}#mermaid-figure-6 .task0,#mermaid-figure-6 .task1,#mermaid-figure-6 .task2,#mermaid-figure-6 .task3{fill:#8a90dd;stroke:#534fbc;}#mermaid-figure-6 .taskTextOutside0,#mermaid-figure-6 .taskTextOutside2{fill:black;}#mermaid-figure-6 .taskTextOutside1,#mermaid-figure-6 .taskTextOutside3{fill:black;}#mermaid-figure-6 .active0,#mermaid-figure-6 .active1,#mermaid-figure-6 .active2,#mermaid-figure-6 .active3{fill:#bfc7ff;stroke:#534fbc;}#mermaid-figure-6 .activeText0,#mermaid-figure-6 .activeText1,#mermaid-figure-6 .activeText2,#mermaid-figure-6 .activeText3{fill:black!important;}#mermaid-figure-6 .done0,#mermaid-figure-6 .done1,#mermaid-figure-6 .done2,#mermaid-figure-6 .done3{stroke:grey;fill:lightgrey;stroke-width:2;}#mermaid-figure-6 .doneText0,#mermaid-figure-6 .doneText1,#mermaid-figure-6 .doneText2,#mermaid-figure-6 .doneText3{fill:black!important;}#mermaid-figure-6 .crit0,#mermaid-figure-6 .crit1,#mermaid-figure-6 .crit2,#mermaid-figure-6 .crit3{stroke:#ff8888;fill:red;stroke-width:2;}#mermaid-figure-6 .activeCrit0,#mermaid-figure-6 .activeCrit1,#mermaid-figure-6 .activeCrit2,#mermaid-figure-6 .activeCrit3{stroke:#ff8888;fill:#bfc7ff;stroke-width:2;}#mermaid-figure-6 .doneCrit0,#mermaid-figure-6 .doneCrit1,#mermaid-figure-6 .doneCrit2,#mermaid-figure-6 .doneCrit3{stroke:#ff8888;fill:lightgrey;stroke-width:2;cursor:pointer;shape-rendering:crispEdges;}#mermaid-figure-6 .milestone{transform:rotate(45deg) scale(0.8,0.8);}#mermaid-figure-6 .milestoneText{font-style:italic;}#mermaid-figure-6 .doneCritText0,#mermaid-figure-6 .doneCritText1,#mermaid-figure-6 .doneCritText2,#mermaid-figure-6 .doneCritText3{fill:black!important;}#mermaid-figure-6 .activeCritText0,#mermaid-figure-6 .activeCritText1,#mermaid-figure-6 .activeCritText2,#mermaid-figure-6 .activeCritText3{fill:black!important;}#mermaid-figure-6 .titleText{text-anchor:middle;font-size:18px;fill:#333;font-family:var(--mermaid-font-family, "trebuchet ms", verdana, arial, sans-serif);}#mermaid-figure-6 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style>
+<g></g><g text-anchor="middle" font-family="sans-serif" font-size="10" fill="none" transform="translate(75, 122)" class="grid"><path d="M0.5,-87V0.5H590.5V-87" stroke="currentColor" class="domain"></path><g transform="translate(44.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-08-10</text></g><g transform="translate(112.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-08-24</text></g><g transform="translate(180.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-09-07</text></g><g transform="translate(249.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-09-21</text></g><g transform="translate(317.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-10-05</text></g><g transform="translate(385.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-10-19</text></g><g transform="translate(453.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-11-02</text></g><g transform="translate(522.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-11-16</text></g><g transform="translate(590.5,0)" opacity="1" class="tick"><line y2="-87" stroke="currentColor"></line><text style="text-anchor: middle;" font-size="10" stroke="none" dy="1em" y="3" fill="#000">2025-11-30</text></g></g><g><rect class="section section1" height="24" width="702.5" y="96" x="0"></rect><rect class="section section0" height="24" width="702.5" y="48" x="0"></rect><rect class="section section0" height="24" width="702.5" y="72" x="0"></rect></g><g><rect class="task done1" transform-origin="221.5px 108px" height="20" width="293" y="98" x="75" ry="3" rx="3" id="a1"></rect><rect class="task active0" transform-origin="445.5px 60px" height="20" width="147" y="50" x="372" ry="3" rx="3" id="p1"></rect><rect class="task active0" transform-origin="594.5px 84px" height="20" width="141" y="74" x="524" ry="3" rx="3" id="p2"></rect><text class="taskText taskText1  doneText1 width-81.390625" y="111.5" x="221.5" font-size="11" id="a1-text">08、09 月份归档 </text><text class="taskText taskText0 activeText0 width-58.859375" y="63.5" x="445.5" font-size="11" id="p1-text">10 月份分区 </text><text class="taskText taskText0 activeText0 width-58.859375" y="87.5" x="594.5" font-size="11" id="p2-text">11 月份分区 </text></g><g><text class="sectionTitle sectionTitle0" font-size="11" y="74" x="10" dy="0em"><tspan x="10" alignment-baseline="central">活跃窗口</tspan></text><text class="sectionTitle sectionTitle1" font-size="11" y="110" x="10" dy="0em"><tspan x="10" alignment-baseline="central">归档窗口</tspan></text></g><g class="today"><line class="today" y2="147" y1="25" x2="445" x1="445"></line></g><text class="titleText" y="25" x="370"></text>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="避免走进雷区" class="slide level2 smaller">
+<h2>避免走进雷区</h2>
+<ul>
+<li><strong>单分区过大</strong>：全表如同单区，剪枝/并行无从谈起。</li>
+<li><strong>对分区键做复杂函数</strong>：导致优化器无法剪枝。</li>
+<li><strong>过度子分区</strong>：元数据爆炸，计划与维护复杂度高。</li>
+<li><strong>频繁变更分区边界</strong>：与统计/缓存/路由抖动共振。</li>
+<li><strong>忽略 NULL/异常值</strong>：NULL 的分区归属需明确定义，避免归到默认分区形成垃圾场。</li>
+</ul>
+</section>
+<section id="事务与一致性分区层面的影响" class="slide level2 smaller">
+<h2>事务与一致性：分区层面的影响</h2>
+<ul>
+<li><strong>单分区事务</strong>最便宜（本地提交），应争取<strong>绝大多数写</strong>到单分区。</li>
+<li><strong>跨分区事务</strong>触发 2PC/MVCC 冲突与网络往返，评估<strong>尾延迟</strong>。</li>
+<li>分区重组中的可见性：SPLIT/MERGE/EXCHANGE 需保持<strong>对外一致语义</strong>，常以元操作的原子性实现。</li>
+<li>只读快照：配合分区做<strong>窗口化报表</strong>与<strong>Follower Read</strong>，明确<strong>新鲜度界限</strong>。</li>
+</ul>
+</section></section>
+<section>
+<section id="分片" class="title-slide slide level1 center">
+<h1>分片</h1>
+
+</section>
+<section id="水平扩展的必要性" class="slide level2 smaller">
+<h2>水平扩展的必要性</h2>
+<ul>
+<li><strong>纵向扩展（scale-up）</strong>受限于单机 CPU/内存/IO，成本呈非线性</li>
+<li><strong>水平扩展（scale-out）</strong>按节点数近似线性扩展吞吐，但引入一致性、可用性、网络复杂度</li>
+<li><strong>目标</strong>：在分布式前提下，尽可能保持单机使用体验，即 ACID、SQL、可预测性能</li>
+</ul>
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>重要</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>PACELC回顾</strong>：有分区（P）时在 <strong>C/A</strong> 间权衡；平时（ELSE）在 <strong>延迟（L）/一致性（C）</strong> 间权衡。分片策略影响两端权衡空间。</p>
+</div>
+</div>
+</div>
+<div class="callout callout-caution callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注意</strong></p>
+</div>
+<div class="callout-content">
+<p>水平扩展不要和水平分区混淆。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="分片策略" class="slide level2">
+<h2>分片策略</h2>
+<ul>
+<li>Range 分片</li>
+<li>Hash 分片</li>
+<li>复合分片</li>
+</ul>
+</section>
+<section id="range-分片" class="slide level2">
+<h2>Range 分片</h2>
+<ul>
+<li>按<strong>有序主键</strong>空间将键区间切为若干段 <code>[k_i, k_j)</code>，每段由<strong>独立复制组</strong>维护</li>
+<li><strong>典型场景</strong>：时间序日志/订单、范围查询/排序密集、冷热分层与滚动窗口</li>
+<li><strong>优势</strong>：范围查询/排序友好，可对“新旧数据”做差异化存储</li>
+<li><strong>风险</strong>：单调写入造成最新 Range 热点</li>
+</ul>
+</section>
+<section id="元信息到leaseholder" class="slide level2">
+<h2>元信息到Leaseholder</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg aria-roledescription="flowchart-v2" role="graphics-document document" viewbox="0 0 943.390625 174" style="; display: block; margin: auto auto auto auto" class="flowchart" xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="960" id="mermaid-figure-5" height="480">
+<style>#mermaid-figure-5{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#mermaid-figure-5 .error-icon{fill:#552222;}#mermaid-figure-5 .error-text{fill:#552222;stroke:#552222;}#mermaid-figure-5 .edge-thickness-normal{stroke-width:1px;}#mermaid-figure-5 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-figure-5 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-figure-5 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-figure-5 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-figure-5 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-figure-5 .marker{fill:#333333;stroke:#333333;}#mermaid-figure-5 .marker.cross{stroke:#333333;}#mermaid-figure-5 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#mermaid-figure-5 p{margin:0;}#mermaid-figure-5 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#333;}#mermaid-figure-5 .cluster-label text{fill:#333;}#mermaid-figure-5 .cluster-label span{color:#333;}#mermaid-figure-5 .cluster-label span p{background-color:transparent;}#mermaid-figure-5 .label text,#mermaid-figure-5 span{fill:#333;color:#333;}#mermaid-figure-5 .node rect,#mermaid-figure-5 .node circle,#mermaid-figure-5 .node ellipse,#mermaid-figure-5 .node polygon,#mermaid-figure-5 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#mermaid-figure-5 .rough-node .label text,#mermaid-figure-5 .node .label text{text-anchor:middle;}#mermaid-figure-5 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-figure-5 .node .label{text-align:center;}#mermaid-figure-5 .node.clickable{cursor:pointer;}#mermaid-figure-5 .arrowheadPath{fill:#333333;}#mermaid-figure-5 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#mermaid-figure-5 .flowchart-link{stroke:#333333;fill:none;}#mermaid-figure-5 .edgeLabel{background-color:rgba(232,232,232, 0.8);text-align:center;}#mermaid-figure-5 .edgeLabel p{background-color:rgba(232,232,232, 0.8);}#mermaid-figure-5 .edgeLabel rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#mermaid-figure-5 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#mermaid-figure-5 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#mermaid-figure-5 .cluster text{fill:#333;}#mermaid-figure-5 .cluster span{color:#333;}#mermaid-figure-5 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#mermaid-figure-5 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#mermaid-figure-5 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style>
+<g><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560043_flowchart-v2-pointEnd"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z"></path></marker><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="4.5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560043_flowchart-v2-pointStart"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="11" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560043_flowchart-v2-circleEnd"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="-1" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527560043_flowchart-v2-circleStart"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="12" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527560043_flowchart-v2-crossEnd"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="-1" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527560043_flowchart-v2-crossStart"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"><path marker-end="url(#mermaid-1760527560043_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_C_M_0" d="M110.672,87L114.839,87C119.005,87,127.339,87,133.589,87C139.839,87,144.005,87,147.505,87C151.005,87,153.839,87,155.255,87L156.672,87"></path><path marker-end="url(#mermaid-1760527560043_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_M_L3_1" d="M415.828,87L423.891,87C431.953,87,448.078,87,460.172,87C472.266,87,480.328,87,487.724,87C495.12,87,501.849,87,505.214,87L508.578,87"></path><path marker-end="url(#mermaid-1760527560043_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_L3_F1_2" d="M706.146,60L717.673,55.833C729.201,51.667,752.257,43.333,765.868,39.167C779.479,35,783.646,35,787.146,35C790.646,35,793.479,35,794.896,35L796.313,35"></path><path marker-end="url(#mermaid-1760527560043_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_L3_F2_3" d="M706.146,114L717.673,118.167C729.201,122.333,752.257,130.667,765.868,134.833C779.479,139,783.646,139,787.146,139C790.646,139,793.479,139,794.896,139L796.313,139"></path></g><g class="edgeLabels"><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g transform="translate(464.203125, 87)" class="edgeLabel"><g transform="translate(-23.375, -12)" class="label"><foreignobject height="24" width="46.75">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel">
+<p>
+k∈[R3)
+</p>
+</span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g></g><g class="nodes"><g transform="translate(59.3359375, 87)" id="flowchart-C-0" class="node default"><rect height="54" width="102.671875" y="-27" x="-51.3359375" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-21.3359375, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="42.671875">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Client
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(288.25, 87)" id="flowchart-M-1" class="node default"><rect height="54" width="255.15625" y="-27" x="-127.578125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-97.578125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="195.15625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Meta: key→range 映射缓存
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(631.4453125, 87)" id="flowchart-L3-3" class="node default"><rect height="54" width="237.734375" y="-27" x="-118.8671875" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-88.8671875, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="177.734375">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Range R3 的 Leaseholder
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(867.8515625, 35)" id="flowchart-F1-5" class="node default"><rect height="54" width="135.078125" y="-27" x="-67.5390625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-37.5390625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="75.078125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Follower 1
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(867.8515625, 139)" id="flowchart-F2-7" class="node default"><rect height="54" width="135.078125" y="-27" x="-67.5390625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-37.5390625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="75.078125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Follower 2
+</p>
+</span>
+</div>
+</foreignobject></g></g></g></g></g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="hash-分片" class="slide level2">
+<h2>Hash 分片</h2>
+<ul>
+<li>对分片键取哈希后按<strong>模数</strong>或一致性哈希映射到桶（bucket）</li>
+<li><strong>典型场景</strong>：多租户均衡写、社交用户对象、Key-Value 单键点查</li>
+<li><strong>优势</strong>：天然负载均衡（键均匀前提下），<strong>易于水平扩展</strong></li>
+<li><strong>风险</strong>：范围查询不友好，跨桶 JOIN/事务频率上升</li>
+</ul>
+</section>
+<section id="hash到桶再到副本组" class="slide level2">
+<h2>Hash到桶再到副本组</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg aria-roledescription="flowchart-v2" role="graphics-document document" viewbox="0 0 962.984375 174" style="; display: block; margin: auto auto auto auto" class="flowchart" xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="960" id="mermaid-figure-4" height="480">
+<style>#mermaid-figure-4{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#mermaid-figure-4 .error-icon{fill:#552222;}#mermaid-figure-4 .error-text{fill:#552222;stroke:#552222;}#mermaid-figure-4 .edge-thickness-normal{stroke-width:1px;}#mermaid-figure-4 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-figure-4 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-figure-4 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-figure-4 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-figure-4 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-figure-4 .marker{fill:#333333;stroke:#333333;}#mermaid-figure-4 .marker.cross{stroke:#333333;}#mermaid-figure-4 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#mermaid-figure-4 p{margin:0;}#mermaid-figure-4 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#333;}#mermaid-figure-4 .cluster-label text{fill:#333;}#mermaid-figure-4 .cluster-label span{color:#333;}#mermaid-figure-4 .cluster-label span p{background-color:transparent;}#mermaid-figure-4 .label text,#mermaid-figure-4 span{fill:#333;color:#333;}#mermaid-figure-4 .node rect,#mermaid-figure-4 .node circle,#mermaid-figure-4 .node ellipse,#mermaid-figure-4 .node polygon,#mermaid-figure-4 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#mermaid-figure-4 .rough-node .label text,#mermaid-figure-4 .node .label text{text-anchor:middle;}#mermaid-figure-4 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-figure-4 .node .label{text-align:center;}#mermaid-figure-4 .node.clickable{cursor:pointer;}#mermaid-figure-4 .arrowheadPath{fill:#333333;}#mermaid-figure-4 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#mermaid-figure-4 .flowchart-link{stroke:#333333;fill:none;}#mermaid-figure-4 .edgeLabel{background-color:rgba(232,232,232, 0.8);text-align:center;}#mermaid-figure-4 .edgeLabel p{background-color:rgba(232,232,232, 0.8);}#mermaid-figure-4 .edgeLabel rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#mermaid-figure-4 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#mermaid-figure-4 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#mermaid-figure-4 .cluster text{fill:#333;}#mermaid-figure-4 .cluster span{color:#333;}#mermaid-figure-4 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#mermaid-figure-4 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#mermaid-figure-4 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style>
+<g><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559905_flowchart-v2-pointEnd"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z"></path></marker><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="4.5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559905_flowchart-v2-pointStart"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="11" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559905_flowchart-v2-circleEnd"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="-1" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559905_flowchart-v2-circleStart"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="12" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527559905_flowchart-v2-crossEnd"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="-1" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527559905_flowchart-v2-crossStart"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"><path marker-end="url(#mermaid-1760527559905_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_C_H_0" d="M110.672,87L114.839,87C119.005,87,127.339,87,133.589,87C139.839,87,144.005,87,147.505,87C151.005,87,153.839,87,155.255,87L156.672,87"></path><path marker-end="url(#mermaid-1760527559905_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_H_Bk_1" d="M289.484,87L293.651,87C297.818,87,306.151,87,312.401,87C318.651,87,322.818,87,326.318,87C329.818,87,332.651,87,334.068,87L335.484,87"></path><path marker-end="url(#mermaid-1760527559905_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_Bk_L_2" d="M520.734,87L524.901,87C529.068,87,537.401,87,543.651,87C549.901,87,554.068,87,557.568,87C561.068,87,563.901,87,565.318,87L566.734,87"></path><path marker-end="url(#mermaid-1760527559905_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_L_F1_3" d="M735.009,60L744.992,55.833C754.975,51.667,774.941,43.333,787.007,39.167C799.073,35,803.24,35,806.74,35C810.24,35,813.073,35,814.49,35L815.906,35"></path><path marker-end="url(#mermaid-1760527559905_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_L_F2_4" d="M735.009,114L744.992,118.167C754.975,122.333,774.941,130.667,787.007,134.833C799.073,139,803.24,139,806.74,139C810.24,139,813.073,139,814.49,139L815.906,139"></path></g><g class="edgeLabels"><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g></g><g class="nodes"><g transform="translate(59.3359375, 87)" id="flowchart-C-0" class="node default"><rect height="54" width="102.671875" y="-27" x="-51.3359375" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-21.3359375, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="42.671875">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Client
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(225.078125, 87)" id="flowchart-H-1" class="node default"><rect height="54" width="128.8125" y="-27" x="-64.40625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-34.40625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="68.8125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+hash(key)
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(430.109375, 87)" id="flowchart-Bk-3" class="node default"><rect height="54" width="181.25" y="-27" x="-90.625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-60.625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="121.25">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Bucket/虚拟节点
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(670.3203125, 87)" id="flowchart-L-5" class="node default"><rect height="54" width="199.171875" y="-27" x="-99.5859375" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-69.5859375, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="139.171875">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+该桶的 Leaseholder
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(887.4453125, 35)" id="flowchart-F1-7" class="node default"><rect height="54" width="135.078125" y="-27" x="-67.5390625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-37.5390625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="75.078125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Follower 1
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(887.4453125, 139)" id="flowchart-F2-9" class="node default"><rect height="54" width="135.078125" y="-27" x="-67.5390625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-37.5390625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="75.078125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Follower 2
+</p>
+</span>
+</div>
+</foreignobject></g></g></g></g></g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="复合层级分片与二级索引" class="slide level2">
+<h2>复合/层级分片与二级索引</h2>
+<ul>
+<li><strong>复合策略</strong>兼顾均衡与范围，例如 <code>tenant_id</code> 先 <strong>Hash 分片</strong>，分片内再按 <code>ts</code> 做 <strong>Range</strong></li>
+<li><strong>成本</strong>：元数据与调度复杂度上升，再均衡需跨两层考虑</li>
+</ul>
+</section>
+<section id="路由与放置" class="slide level2">
+<h2>路由与放置</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg aria-roledescription="flowchart-v2" role="graphics-document document" viewbox="0 0 799.1875 174" style="; display: block; margin: auto auto auto auto" class="flowchart" xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="960" id="mermaid-figure-3" height="480">
+<style>#mermaid-figure-3{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#mermaid-figure-3 .error-icon{fill:#552222;}#mermaid-figure-3 .error-text{fill:#552222;stroke:#552222;}#mermaid-figure-3 .edge-thickness-normal{stroke-width:1px;}#mermaid-figure-3 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-figure-3 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-figure-3 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-figure-3 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-figure-3 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-figure-3 .marker{fill:#333333;stroke:#333333;}#mermaid-figure-3 .marker.cross{stroke:#333333;}#mermaid-figure-3 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#mermaid-figure-3 p{margin:0;}#mermaid-figure-3 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#333;}#mermaid-figure-3 .cluster-label text{fill:#333;}#mermaid-figure-3 .cluster-label span{color:#333;}#mermaid-figure-3 .cluster-label span p{background-color:transparent;}#mermaid-figure-3 .label text,#mermaid-figure-3 span{fill:#333;color:#333;}#mermaid-figure-3 .node rect,#mermaid-figure-3 .node circle,#mermaid-figure-3 .node ellipse,#mermaid-figure-3 .node polygon,#mermaid-figure-3 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#mermaid-figure-3 .rough-node .label text,#mermaid-figure-3 .node .label text{text-anchor:middle;}#mermaid-figure-3 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-figure-3 .node .label{text-align:center;}#mermaid-figure-3 .node.clickable{cursor:pointer;}#mermaid-figure-3 .arrowheadPath{fill:#333333;}#mermaid-figure-3 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#mermaid-figure-3 .flowchart-link{stroke:#333333;fill:none;}#mermaid-figure-3 .edgeLabel{background-color:rgba(232,232,232, 0.8);text-align:center;}#mermaid-figure-3 .edgeLabel p{background-color:rgba(232,232,232, 0.8);}#mermaid-figure-3 .edgeLabel rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#mermaid-figure-3 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#mermaid-figure-3 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#mermaid-figure-3 .cluster text{fill:#333;}#mermaid-figure-3 .cluster span{color:#333;}#mermaid-figure-3 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#mermaid-figure-3 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#mermaid-figure-3 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style>
+<g><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559774_flowchart-v2-pointEnd"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 0 L 10 5 L 0 10 z"></path></marker><marker orient="auto" markerheight="8" markerwidth="8" markerunits="userSpaceOnUse" refy="5" refx="4.5" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559774_flowchart-v2-pointStart"><path style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 0 5 L 10 10 L 10 0 z"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="11" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559774_flowchart-v2-circleEnd"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5" refx="-1" viewbox="0 0 10 10" class="marker flowchart-v2" id="mermaid-1760527559774_flowchart-v2-circleStart"><circle style="stroke-width: 1; stroke-dasharray: 1, 0;" class="arrowMarkerPath" r="5" cy="5" cx="5"></circle></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="12" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527559774_flowchart-v2-crossEnd"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><marker orient="auto" markerheight="11" markerwidth="11" markerunits="userSpaceOnUse" refy="5.2" refx="-1" viewbox="0 0 11 11" class="marker cross flowchart-v2" id="mermaid-1760527559774_flowchart-v2-crossStart"><path style="stroke-width: 2; stroke-dasharray: 1, 0;" class="arrowMarkerPath" d="M 1,1 l 9,9 M 10,1 l -9,9"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"><path marker-end="url(#mermaid-1760527559774_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_C_H_0" d="M110.672,87L114.839,87C119.005,87,127.339,87,133.589,87C139.839,87,144.005,87,147.505,87C151.005,87,153.839,87,155.255,87L156.672,87"></path><path marker-end="url(#mermaid-1760527559774_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_H_Bk_1" d="M335.688,87L339.854,87C344.021,87,352.354,87,358.604,87C364.854,87,369.021,87,372.521,87C376.021,87,378.854,87,380.271,87L381.688,87"></path><path marker-end="url(#mermaid-1760527559774_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_Bk_R1_2" d="M558.888,60L569.341,55.833C579.795,51.667,600.702,43.333,613.239,39.167C625.776,35,629.943,35,633.443,35C636.943,35,639.776,35,641.193,35L642.609,35"></path><path marker-end="url(#mermaid-1760527559774_flowchart-v2-pointEnd)" style="" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" id="L_Bk_R2_3" d="M558.888,114L569.341,118.167C579.795,122.333,600.702,130.667,613.239,134.833C625.776,139,629.943,139,633.443,139C636.943,139,639.776,139,641.193,139L642.609,139"></path></g><g class="edgeLabels"><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g><g class="edgeLabel"><g transform="translate(0, 0)" class="label"><foreignobject height="0" width="0">
+<div class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="edgeLabel"></span>
+</div>
+</foreignobject></g></g></g><g class="nodes"><g transform="translate(59.3359375, 87)" id="flowchart-C-0" class="node default"><rect height="54" width="102.671875" y="-27" x="-51.3359375" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-21.3359375, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="42.671875">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Client
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(248.1796875, 87)" id="flowchart-H-1" class="node default"><rect height="54" width="175.015625" y="-27" x="-87.5078125" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-57.5078125, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="115.015625">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Hash(tenant_id)
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(491.1484375, 87)" id="flowchart-Bk-3" class="node default"><rect height="54" width="210.921875" y="-27" x="-105.4609375" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-75.4609375, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="150.921875">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Bucket/tenant-group
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(718.8984375, 35)" id="flowchart-R1-5" class="node default"><rect height="54" width="144.578125" y="-27" x="-72.2890625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-42.2890625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="84.578125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Range(ts)#1
+</p>
+</span>
+</div>
+</foreignobject></g></g><g transform="translate(718.8984375, 139)" id="flowchart-R2-7" class="node default"><rect height="54" width="144.578125" y="-27" x="-72.2890625" data-et="node" data-id="abc" style="" class="basic label-container"></rect><g transform="translate(-42.2890625, -12)" style="" class="label"><rect></rect><foreignobject height="24" width="84.578125">
+<div style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" data-xmlns="http://www.w3.org/1999/xhtml">
+<span class="nodeLabel">
+<p>
+Range(ts)#2
+</p>
+</span>
+</div>
+</foreignobject></g></g></g></g></g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="热点" class="slide level2">
+<h2>热点</h2>
+<ul>
+<li><strong>写热点</strong>：顺序键（时间、自增 ID）、单租户/大客户流量倾斜、某一 SKU 秒杀</li>
+<li><strong>读热点</strong>：爆款对象被频繁读取（热门帖子、视频、配置）</li>
+<li>观测指标：<strong>每Range QPS或写入字节、p99延迟、Leaseholder 分布、CPU/IO饱和度</strong></li>
+</ul>
+</section>
+<section id="再均衡手段" class="slide level2 smaller">
+<h2>再均衡手段</h2>
+<ul>
+<li><strong>Split/Merge</strong>：按阈值或预测切分/合并 Range，<strong>缩小热点影响面</strong></li>
+<li><strong>Move/Rebalance Replica</strong>：把某个 Range 的副本/租约迁移到更空闲节点</li>
+<li><strong>Leaseholder 转移</strong>：把<strong>读写调度权</strong>迁到更接近流量的一侧，降低跨机跳数</li>
+<li><strong>限流/排队</strong>：对热点键或 Range 应用<strong>背压</strong></li>
+</ul>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p>背压（backpressure）是指将输入转换为输出的过程受到某种阻碍。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="leaseholder-转移" class="slide level2">
+<h2>Leaseholder 转移</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg aria-roledescription="sequence" role="graphics-document document" viewbox="-50 -10 929 450" style="; display: block; margin: auto auto auto auto" xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="960" id="mermaid-figure-2" height="480">
+<g><rect class="actor actor-bottom" ry="3" rx="3" name="F2" height="65" width="150" stroke="#666" fill="#eaeaea" y="364" x="679"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="396.5" x="754"><tspan dy="0" x="754">Follower(节点C)</tspan></text></g><g><rect class="actor actor-bottom" ry="3" rx="3" name="F1" height="65" width="150" stroke="#666" fill="#eaeaea" y="364" x="479"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="396.5" x="554"><tspan dy="0" x="554">Follower(节点B)</tspan></text></g><g><rect class="actor actor-bottom" ry="3" rx="3" name="LS" height="65" width="152" stroke="#666" fill="#eaeaea" y="364" x="211"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="396.5" x="287"><tspan dy="0" x="287">Leaseholder(节点A)</tspan></text></g><g><rect class="actor actor-bottom" ry="3" rx="3" name="C" height="65" width="150" stroke="#666" fill="#eaeaea" y="364" x="0"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="396.5" x="75"><tspan dy="0" x="75">Client</tspan></text></g><g><line name="F2" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="364" x2="754" y1="5" x1="754" id="actor3"></line><g id="root-3"><rect class="actor actor-top" ry="3" rx="3" name="F2" height="65" width="150" stroke="#666" fill="#eaeaea" y="0" x="679"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5" x="754"><tspan dy="0" x="754">Follower(节点C)</tspan></text></g></g><g><line name="F1" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="364" x2="554" y1="5" x1="554" id="actor2"></line><g id="root-2"><rect class="actor actor-top" ry="3" rx="3" name="F1" height="65" width="150" stroke="#666" fill="#eaeaea" y="0" x="479"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5" x="554"><tspan dy="0" x="554">Follower(节点B)</tspan></text></g></g><g><line name="LS" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="364" x2="287" y1="5" x1="287" id="actor1"></line><g id="root-1"><rect class="actor actor-top" ry="3" rx="3" name="LS" height="65" width="152" stroke="#666" fill="#eaeaea" y="0" x="211"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5" x="287"><tspan dy="0" x="287">Leaseholder(节点A)</tspan></text></g></g><g><line name="C" stroke="#999" stroke-width="0.5px" class="actor-line 200" y2="364" x2="75" y1="5" x1="75" id="actor0"></line><g id="root-0"><rect class="actor actor-top" ry="3" rx="3" name="C" height="65" width="150" stroke="#666" fill="#eaeaea" y="0" x="0"></rect><text style="text-anchor: middle; font-size: 16px; font-weight: 400;" class="actor actor-box" alignment-baseline="central" dominant-baseline="central" y="32.5" x="75"><tspan dy="0" x="75">Client</tspan></text></g></g>
+<style>#mermaid-figure-2{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}#mermaid-figure-2 .error-icon{fill:#552222;}#mermaid-figure-2 .error-text{fill:#552222;stroke:#552222;}#mermaid-figure-2 .edge-thickness-normal{stroke-width:1px;}#mermaid-figure-2 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-figure-2 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-figure-2 .edge-thickness-invisible{stroke-width:0;fill:none;}#mermaid-figure-2 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-figure-2 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-figure-2 .marker{fill:#333333;stroke:#333333;}#mermaid-figure-2 .marker.cross{stroke:#333333;}#mermaid-figure-2 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#mermaid-figure-2 p{margin:0;}#mermaid-figure-2 .actor{stroke:hsl(259.6261682243, 59.7765363128%, 87.9019607843%);fill:#ECECFF;}#mermaid-figure-2 text.actor>tspan{fill:black;stroke:none;}#mermaid-figure-2 .actor-line{stroke:hsl(259.6261682243, 59.7765363128%, 87.9019607843%);}#mermaid-figure-2 .messageLine0{stroke-width:1.5;stroke-dasharray:none;stroke:#333;}#mermaid-figure-2 .messageLine1{stroke-width:1.5;stroke-dasharray:2,2;stroke:#333;}#mermaid-figure-2 #mermaid-figure-2-arrowhead path{fill:#333;stroke:#333;}#mermaid-figure-2 .sequenceNumber{fill:white;}#mermaid-figure-2 #mermaid-figure-2-sequencenumber{fill:#333;}#mermaid-figure-2 #mermaid-figure-2-crosshead path{fill:#333;stroke:#333;}#mermaid-figure-2 .messageText{fill:#333;stroke:none;}#mermaid-figure-2 .labelBox{stroke:hsl(259.6261682243, 59.7765363128%, 87.9019607843%);fill:#ECECFF;}#mermaid-figure-2 .labelText,#mermaid-figure-2 .labelText>tspan{fill:black;stroke:none;}#mermaid-figure-2 .loopText,#mermaid-figure-2 .loopText>tspan{fill:black;stroke:none;}#mermaid-figure-2 .loopLine{stroke-width:2px;stroke-dasharray:2,2;stroke:hsl(259.6261682243, 59.7765363128%, 87.9019607843%);fill:hsl(259.6261682243, 59.7765363128%, 87.9019607843%);}#mermaid-figure-2 .note{stroke:#aaaa33;fill:#fff5ad;}#mermaid-figure-2 .noteText,#mermaid-figure-2 .noteText>tspan{fill:black;stroke:none;}#mermaid-figure-2 .activation0{fill:#f4f4f4;stroke:#666;}#mermaid-figure-2 .activation1{fill:#f4f4f4;stroke:#666;}#mermaid-figure-2 .activation2{fill:#f4f4f4;stroke:#666;}#mermaid-figure-2 .actorPopupMenu{position:absolute;}#mermaid-figure-2 .actorPopupMenuPanel{position:absolute;fill:#ECECFF;box-shadow:0px 8px 16px 0px rgba(0,0,0,0.2);filter:drop-shadow(3px 5px 2px rgb(0 0 0 / 0.4));}#mermaid-figure-2 .actor-man line{stroke:hsl(259.6261682243, 59.7765363128%, 87.9019607843%);fill:#ECECFF;}#mermaid-figure-2 .actor-man circle,#mermaid-figure-2 line{stroke:hsl(259.6261682243, 59.7765363128%, 87.9019607843%);fill:#ECECFF;stroke-width:2px;}#mermaid-figure-2 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style>
+<g></g><defs><symbol height="24" width="24" id="mermaid-figure-2-computer"><path d="M2 2v13h20v-13h-20zm18 11h-16v-9h16v9zm-10.228 6l.466-1h3.524l.467 1h-4.457zm14.228 3h-24l2-6h2.104l-1.33 4h18.45l-1.297-4h2.073l2 6zm-5-10h-14v-7h14v7z" transform="scale(.5)"></path></symbol></defs><defs><symbol clip-rule="evenodd" fill-rule="evenodd" id="mermaid-figure-2-database"><path d="M12.258.001l.256.004.255.005.253.008.251.01.249.012.247.015.246.016.242.019.241.02.239.023.236.024.233.027.231.028.229.031.225.032.223.034.22.036.217.038.214.04.211.041.208.043.205.045.201.046.198.048.194.05.191.051.187.053.183.054.18.056.175.057.172.059.168.06.163.061.16.063.155.064.15.066.074.033.073.033.071.034.07.034.069.035.068.035.067.035.066.035.064.036.064.036.062.036.06.036.06.037.058.037.058.037.055.038.055.038.053.038.052.038.051.039.05.039.048.039.047.039.045.04.044.04.043.04.041.04.04.041.039.041.037.041.036.041.034.041.033.042.032.042.03.042.029.042.027.042.026.043.024.043.023.043.021.043.02.043.018.044.017.043.015.044.013.044.012.044.011.045.009.044.007.045.006.045.004.045.002.045.001.045v17l-.001.045-.002.045-.004.045-.006.045-.007.045-.009.044-.011.045-.012.044-.013.044-.015.044-.017.043-.018.044-.02.043-.021.043-.023.043-.024.043-.026.043-.027.042-.029.042-.03.042-.032.042-.033.042-.034.041-.036.041-.037.041-.039.041-.04.041-.041.04-.043.04-.044.04-.045.04-.047.039-.048.039-.05.039-.051.039-.052.038-.053.038-.055.038-.055.038-.058.037-.058.037-.06.037-.06.036-.062.036-.064.036-.064.036-.066.035-.067.035-.068.035-.069.035-.07.034-.071.034-.073.033-.074.033-.15.066-.155.064-.16.063-.163.061-.168.06-.172.059-.175.057-.18.056-.183.054-.187.053-.191.051-.194.05-.198.048-.201.046-.205.045-.208.043-.211.041-.214.04-.217.038-.22.036-.223.034-.225.032-.229.031-.231.028-.233.027-.236.024-.239.023-.241.02-.242.019-.246.016-.247.015-.249.012-.251.01-.253.008-.255.005-.256.004-.258.001-.258-.001-.256-.004-.255-.005-.253-.008-.251-.01-.249-.012-.247-.015-.245-.016-.243-.019-.241-.02-.238-.023-.236-.024-.234-.027-.231-.028-.228-.031-.226-.032-.223-.034-.22-.036-.217-.038-.214-.04-.211-.041-.208-.043-.204-.045-.201-.046-.198-.048-.195-.05-.19-.051-.187-.053-.184-.054-.179-.056-.176-.057-.172-.059-.167-.06-.164-.061-.159-.063-.155-.064-.151-.066-.074-.033-.072-.033-.072-.034-.07-.034-.069-.035-.068-.035-.067-.035-.066-.035-.064-.036-.063-.036-.062-.036-.061-.036-.06-.037-.058-.037-.057-.037-.056-.038-.055-.038-.053-.038-.052-.038-.051-.039-.049-.039-.049-.039-.046-.039-.046-.04-.044-.04-.043-.04-.041-.04-.04-.041-.039-.041-.037-.041-.036-.041-.034-.041-.033-.042-.032-.042-.03-.042-.029-.042-.027-.042-.026-.043-.024-.043-.023-.043-.021-.043-.02-.043-.018-.044-.017-.043-.015-.044-.013-.044-.012-.044-.011-.045-.009-.044-.007-.045-.006-.045-.004-.045-.002-.045-.001-.045v-17l.001-.045.002-.045.004-.045.006-.045.007-.045.009-.044.011-.045.012-.044.013-.044.015-.044.017-.043.018-.044.02-.043.021-.043.023-.043.024-.043.026-.043.027-.042.029-.042.03-.042.032-.042.033-.042.034-.041.036-.041.037-.041.039-.041.04-.041.041-.04.043-.04.044-.04.046-.04.046-.039.049-.039.049-.039.051-.039.052-.038.053-.038.055-.038.056-.038.057-.037.058-.037.06-.037.061-.036.062-.036.063-.036.064-.036.066-.035.067-.035.068-.035.069-.035.07-.034.072-.034.072-.033.074-.033.151-.066.155-.064.159-.063.164-.061.167-.06.172-.059.176-.057.179-.056.184-.054.187-.053.19-.051.195-.05.198-.048.201-.046.204-.045.208-.043.211-.041.214-.04.217-.038.22-.036.223-.034.226-.032.228-.031.231-.028.234-.027.236-.024.238-.023.241-.02.243-.019.245-.016.247-.015.249-.012.251-.01.253-.008.255-.005.256-.004.258-.001.258.001zm-9.258 20.499v.01l.001.021.003.021.004.022.005.021.006.022.007.022.009.023.01.022.011.023.012.023.013.023.015.023.016.024.017.023.018.024.019.024.021.024.022.025.023.024.024.025.052.049.056.05.061.051.066.051.07.051.075.051.079.052.084.052.088.052.092.052.097.052.102.051.105.052.11.052.114.051.119.051.123.051.127.05.131.05.135.05.139.048.144.049.147.047.152.047.155.047.16.045.163.045.167.043.171.043.176.041.178.041.183.039.187.039.19.037.194.035.197.035.202.033.204.031.209.03.212.029.216.027.219.025.222.024.226.021.23.02.233.018.236.016.24.015.243.012.246.01.249.008.253.005.256.004.259.001.26-.001.257-.004.254-.005.25-.008.247-.011.244-.012.241-.014.237-.016.233-.018.231-.021.226-.021.224-.024.22-.026.216-.027.212-.028.21-.031.205-.031.202-.034.198-.034.194-.036.191-.037.187-.039.183-.04.179-.04.175-.042.172-.043.168-.044.163-.045.16-.046.155-.046.152-.047.148-.048.143-.049.139-.049.136-.05.131-.05.126-.05.123-.051.118-.052.114-.051.11-.052.106-.052.101-.052.096-.052.092-.052.088-.053.083-.051.079-.052.074-.052.07-.051.065-.051.06-.051.056-.05.051-.05.023-.024.023-.025.021-.024.02-.024.019-.024.018-.024.017-.024.015-.023.014-.024.013-.023.012-.023.01-.023.01-.022.008-.022.006-.022.006-.022.004-.022.004-.021.001-.021.001-.021v-4.127l-.077.055-.08.053-.083.054-.085.053-.087.052-.09.052-.093.051-.095.05-.097.05-.1.049-.102.049-.105.048-.106.047-.109.047-.111.046-.114.045-.115.045-.118.044-.12.043-.122.042-.124.042-.126.041-.128.04-.13.04-.132.038-.134.038-.135.037-.138.037-.139.035-.142.035-.143.034-.144.033-.147.032-.148.031-.15.03-.151.03-.153.029-.154.027-.156.027-.158.026-.159.025-.161.024-.162.023-.163.022-.165.021-.166.02-.167.019-.169.018-.169.017-.171.016-.173.015-.173.014-.175.013-.175.012-.177.011-.178.01-.179.008-.179.008-.181.006-.182.005-.182.004-.184.003-.184.002h-.37l-.184-.002-.184-.003-.182-.004-.182-.005-.181-.006-.179-.008-.179-.008-.178-.01-.176-.011-.176-.012-.175-.013-.173-.014-.172-.015-.171-.016-.17-.017-.169-.018-.167-.019-.166-.02-.165-.021-.163-.022-.162-.023-.161-.024-.159-.025-.157-.026-.156-.027-.155-.027-.153-.029-.151-.03-.15-.03-.148-.031-.146-.032-.145-.033-.143-.034-.141-.035-.14-.035-.137-.037-.136-.037-.134-.038-.132-.038-.13-.04-.128-.04-.126-.041-.124-.042-.122-.042-.12-.044-.117-.043-.116-.045-.113-.045-.112-.046-.109-.047-.106-.047-.105-.048-.102-.049-.1-.049-.097-.05-.095-.05-.093-.052-.09-.051-.087-.052-.085-.053-.083-.054-.08-.054-.077-.054v4.127zm0-5.654v.011l.001.021.003.021.004.021.005.022.006.022.007.022.009.022.01.022.011.023.012.023.013.023.015.024.016.023.017.024.018.024.019.024.021.024.022.024.023.025.024.024.052.05.056.05.061.05.066.051.07.051.075.052.079.051.084.052.088.052.092.052.097.052.102.052.105.052.11.051.114.051.119.052.123.05.127.051.131.05.135.049.139.049.144.048.147.048.152.047.155.046.16.045.163.045.167.044.171.042.176.042.178.04.183.04.187.038.19.037.194.036.197.034.202.033.204.032.209.03.212.028.216.027.219.025.222.024.226.022.23.02.233.018.236.016.24.014.243.012.246.01.249.008.253.006.256.003.259.001.26-.001.257-.003.254-.006.25-.008.247-.01.244-.012.241-.015.237-.016.233-.018.231-.02.226-.022.224-.024.22-.025.216-.027.212-.029.21-.03.205-.032.202-.033.198-.035.194-.036.191-.037.187-.039.183-.039.179-.041.175-.042.172-.043.168-.044.163-.045.16-.045.155-.047.152-.047.148-.048.143-.048.139-.05.136-.049.131-.05.126-.051.123-.051.118-.051.114-.052.11-.052.106-.052.101-.052.096-.052.092-.052.088-.052.083-.052.079-.052.074-.051.07-.052.065-.051.06-.05.056-.051.051-.049.023-.025.023-.024.021-.025.02-.024.019-.024.018-.024.017-.024.015-.023.014-.023.013-.024.012-.022.01-.023.01-.023.008-.022.006-.022.006-.022.004-.021.004-.022.001-.021.001-.021v-4.139l-.077.054-.08.054-.083.054-.085.052-.087.053-.09.051-.093.051-.095.051-.097.05-.1.049-.102.049-.105.048-.106.047-.109.047-.111.046-.114.045-.115.044-.118.044-.12.044-.122.042-.124.042-.126.041-.128.04-.13.039-.132.039-.134.038-.135.037-.138.036-.139.036-.142.035-.143.033-.144.033-.147.033-.148.031-.15.03-.151.03-.153.028-.154.028-.156.027-.158.026-.159.025-.161.024-.162.023-.163.022-.165.021-.166.02-.167.019-.169.018-.169.017-.171.016-.173.015-.173.014-.175.013-.175.012-.177.011-.178.009-.179.009-.179.007-.181.007-.182.005-.182.004-.184.003-.184.002h-.37l-.184-.002-.184-.003-.182-.004-.182-.005-.181-.007-.179-.007-.179-.009-.178-.009-.176-.011-.176-.012-.175-.013-.173-.014-.172-.015-.171-.016-.17-.017-.169-.018-.167-.019-.166-.02-.165-.021-.163-.022-.162-.023-.161-.024-.159-.025-.157-.026-.156-.027-.155-.028-.153-.028-.151-.03-.15-.03-.148-.031-.146-.033-.145-.033-.143-.033-.141-.035-.14-.036-.137-.036-.136-.037-.134-.038-.132-.039-.13-.039-.128-.04-.126-.041-.124-.042-.122-.043-.12-.043-.117-.044-.116-.044-.113-.046-.112-.046-.109-.046-.106-.047-.105-.048-.102-.049-.1-.049-.097-.05-.095-.051-.093-.051-.09-.051-.087-.053-.085-.052-.083-.054-.08-.054-.077-.054v4.139zm0-5.666v.011l.001.02.003.022.004.021.005.022.006.021.007.022.009.023.01.022.011.023.012.023.013.023.015.023.016.024.017.024.018.023.019.024.021.025.022.024.023.024.024.025.052.05.056.05.061.05.066.051.07.051.075.052.079.051.084.052.088.052.092.052.097.052.102.052.105.051.11.052.114.051.119.051.123.051.127.05.131.05.135.05.139.049.144.048.147.048.152.047.155.046.16.045.163.045.167.043.171.043.176.042.178.04.183.04.187.038.19.037.194.036.197.034.202.033.204.032.209.03.212.028.216.027.219.025.222.024.226.021.23.02.233.018.236.017.24.014.243.012.246.01.249.008.253.006.256.003.259.001.26-.001.257-.003.254-.006.25-.008.247-.01.244-.013.241-.014.237-.016.233-.018.231-.02.226-.022.224-.024.22-.025.216-.027.212-.029.21-.03.205-.032.202-.033.198-.035.194-.036.191-.037.187-.039.183-.039.179-.041.175-.042.172-.043.168-.044.163-.045.16-.045.155-.047.152-.047.148-.048.143-.049.139-.049.136-.049.131-.051.126-.05.123-.051.118-.052.114-.051.11-.052.106-.052.101-.052.096-.052.092-.052.088-.052.083-.052.079-.052.074-.052.07-.051.065-.051.06-.051.056-.05.051-.049.023-.025.023-.025.021-.024.02-.024.019-.024.018-.024.017-.024.015-.023.014-.024.013-.023.012-.023.01-.022.01-.023.008-.022.006-.022.006-.022.004-.022.004-.021.001-.021.001-.021v-4.153l-.077.054-.08.054-.083.053-.085.053-.087.053-.09.051-.093.051-.095.051-.097.05-.1.049-.102.048-.105.048-.106.048-.109.046-.111.046-.114.046-.115.044-.118.044-.12.043-.122.043-.124.042-.126.041-.128.04-.13.039-.132.039-.134.038-.135.037-.138.036-.139.036-.142.034-.143.034-.144.033-.147.032-.148.032-.15.03-.151.03-.153.028-.154.028-.156.027-.158.026-.159.024-.161.024-.162.023-.163.023-.165.021-.166.02-.167.019-.169.018-.169.017-.171.016-.173.015-.173.014-.175.013-.175.012-.177.01-.178.01-.179.009-.179.007-.181.006-.182.006-.182.004-.184.003-.184.001-.185.001-.185-.001-.184-.001-.184-.003-.182-.004-.182-.006-.181-.006-.179-.007-.179-.009-.178-.01-.176-.01-.176-.012-.175-.013-.173-.014-.172-.015-.171-.016-.17-.017-.169-.018-.167-.019-.166-.02-.165-.021-.163-.023-.162-.023-.161-.024-.159-.024-.157-.026-.156-.027-.155-.028-.153-.028-.151-.03-.15-.03-.148-.032-.146-.032-.145-.033-.143-.034-.141-.034-.14-.036-.137-.036-.136-.037-.134-.038-.132-.039-.13-.039-.128-.041-.126-.041-.124-.041-.122-.043-.12-.043-.117-.044-.116-.044-.113-.046-.112-.046-.109-.046-.106-.048-.105-.048-.102-.048-.1-.05-.097-.049-.095-.051-.093-.051-.09-.052-.087-.052-.085-.053-.083-.053-.08-.054-.077-.054v4.153zm8.74-8.179l-.257.004-.254.005-.25.008-.247.011-.244.012-.241.014-.237.016-.233.018-.231.021-.226.022-.224.023-.22.026-.216.027-.212.028-.21.031-.205.032-.202.033-.198.034-.194.036-.191.038-.187.038-.183.04-.179.041-.175.042-.172.043-.168.043-.163.045-.16.046-.155.046-.152.048-.148.048-.143.048-.139.049-.136.05-.131.05-.126.051-.123.051-.118.051-.114.052-.11.052-.106.052-.101.052-.096.052-.092.052-.088.052-.083.052-.079.052-.074.051-.07.052-.065.051-.06.05-.056.05-.051.05-.023.025-.023.024-.021.024-.02.025-.019.024-.018.024-.017.023-.015.024-.014.023-.013.023-.012.023-.01.023-.01.022-.008.022-.006.023-.006.021-.004.022-.004.021-.001.021-.001.021.001.021.001.021.004.021.004.022.006.021.006.023.008.022.01.022.01.023.012.023.013.023.014.023.015.024.017.023.018.024.019.024.02.025.021.024.023.024.023.025.051.05.056.05.06.05.065.051.07.052.074.051.079.052.083.052.088.052.092.052.096.052.101.052.106.052.11.052.114.052.118.051.123.051.126.051.131.05.136.05.139.049.143.048.148.048.152.048.155.046.16.046.163.045.168.043.172.043.175.042.179.041.183.04.187.038.191.038.194.036.198.034.202.033.205.032.21.031.212.028.216.027.22.026.224.023.226.022.231.021.233.018.237.016.241.014.244.012.247.011.25.008.254.005.257.004.26.001.26-.001.257-.004.254-.005.25-.008.247-.011.244-.012.241-.014.237-.016.233-.018.231-.021.226-.022.224-.023.22-.026.216-.027.212-.028.21-.031.205-.032.202-.033.198-.034.194-.036.191-.038.187-.038.183-.04.179-.041.175-.042.172-.043.168-.043.163-.045.16-.046.155-.046.152-.048.148-.048.143-.048.139-.049.136-.05.131-.05.126-.051.123-.051.118-.051.114-.052.11-.052.106-.052.101-.052.096-.052.092-.052.088-.052.083-.052.079-.052.074-.051.07-.052.065-.051.06-.05.056-.05.051-.05.023-.025.023-.024.021-.024.02-.025.019-.024.018-.024.017-.023.015-.024.014-.023.013-.023.012-.023.01-.023.01-.022.008-.022.006-.023.006-.021.004-.022.004-.021.001-.021.001-.021-.001-.021-.001-.021-.004-.021-.004-.022-.006-.021-.006-.023-.008-.022-.01-.022-.01-.023-.012-.023-.013-.023-.014-.023-.015-.024-.017-.023-.018-.024-.019-.024-.02-.025-.021-.024-.023-.024-.023-.025-.051-.05-.056-.05-.06-.05-.065-.051-.07-.052-.074-.051-.079-.052-.083-.052-.088-.052-.092-.052-.096-.052-.101-.052-.106-.052-.11-.052-.114-.052-.118-.051-.123-.051-.126-.051-.131-.05-.136-.05-.139-.049-.143-.048-.148-.048-.152-.048-.155-.046-.16-.046-.163-.045-.168-.043-.172-.043-.175-.042-.179-.041-.183-.04-.187-.038-.191-.038-.194-.036-.198-.034-.202-.033-.205-.032-.21-.031-.212-.028-.216-.027-.22-.026-.224-.023-.226-.022-.231-.021-.233-.018-.237-.016-.241-.014-.244-.012-.247-.011-.25-.008-.254-.005-.257-.004-.26-.001-.26.001z" transform="scale(.5)"></path></symbol></defs><defs><symbol height="24" width="24" id="mermaid-figure-2-clock"><path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.848 12.459c.202.038.202.333.001.372-1.907.361-6.045 1.111-6.547 1.111-.719 0-1.301-.582-1.301-1.301 0-.512.77-5.447 1.125-7.445.034-.192.312-.181.343.014l.985 6.238 5.394 1.011z" transform="scale(.5)"></path></symbol></defs><defs><marker orient="auto-start-reverse" markerheight="12" markerwidth="12" markerunits="userSpaceOnUse" refy="5" refx="7.9" id="mermaid-figure-2-arrowhead"><path d="M -1 0 L 10 5 L 0 10 z"></path></marker></defs><defs><marker refy="4.5" refx="4" orient="auto" markerheight="8" markerwidth="15" id="mermaid-figure-2-crosshead"><path style="stroke-dasharray: 0, 0;" d="M 1,2 L 6,7 M 6,2 L 1,7" stroke-width="1pt" stroke="#000000" fill="none"></path></marker></defs><defs><marker orient="auto" markerheight="28" markerwidth="20" refy="7" refx="15.5" id="mermaid-figure-2-filled-head"><path d="M 18,7 L9,13 L14,7 L9,1 Z"></path></marker></defs><defs><marker orient="auto" markerheight="40" markerwidth="60" refy="15" refx="15" id="mermaid-figure-2-sequencenumber"><circle r="6" cy="15" cx="15"></circle></marker></defs><g><rect class="note" height="39" width="247" stroke="#666" fill="#EDF2AE" y="121" x="163.5"></rect><text style="font-size: 16px; font-weight: 400;" dy="1em" class="noteText" alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="126" x="287"><tspan x="287">触发阈值→分裂 R1 -&gt; R1a + R1b</tspan></text></g><text style="font-size: 16px; font-weight: 400;" dy="1em" class="messageText" alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="80" x="180">高并发写入 k in [R1]</text><line style="fill: none;" marker-end="url(#mermaid-figure-2-arrowhead)" stroke="none" stroke-width="2" class="messageLine0" y2="111" x2="283" y1="111" x1="76"></line><text style="font-size: 16px; font-weight: 400;" dy="1em" class="messageText" alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="175" x="419">复制新 Range 元数据</text><line style="stroke-dasharray: 3, 3; fill: none;" marker-end="url(#mermaid-figure-2-arrowhead)" stroke="none" stroke-width="2" class="messageLine1" y2="206" x2="550" y1="206" x1="288"></line><text style="font-size: 16px; font-weight: 400;" dy="1em" class="messageText" alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="221" x="519">复制新 Range 元数据</text><line style="stroke-dasharray: 3, 3; fill: none;" marker-end="url(#mermaid-figure-2-arrowhead)" stroke="none" stroke-width="2" class="messageLine1" y2="252" x2="750" y1="252" x1="288"></line><text style="font-size: 16px; font-weight: 400;" dy="1em" class="messageText" alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="267" x="419">将 R1b 的 lease 转移到节点B</text><line style="fill: none;" marker-end="url(#mermaid-figure-2-arrowhead)" stroke="none" stroke-width="2" class="messageLine0" y2="298" x2="550" y1="298" x1="288"></line><text style="font-size: 16px; font-weight: 400;" dy="1em" class="messageText" alignment-baseline="middle" dominant-baseline="middle" text-anchor="middle" y="313" x="313">后续键(k ∈ R1b)直达新 leaseholder</text><line style="fill: none;" marker-end="url(#mermaid-figure-2-arrowhead)" stroke="none" stroke-width="2" class="messageLine0" y2="344" x2="550" y1="344" x1="76"></line>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="多-raft多组复制" class="slide level2">
+<h2>多 Raft/多组复制</h2>
+<ul>
+<li><strong>每个 Range 一个 Raft 复制组</strong>，独立选主、独立日志、独立提交点</li>
+<li><strong>Leaseholder</strong> 承担<strong>线性化读写入口</strong>与时间戳/只读策略</li>
+<li><strong>Split/Merge 是原子元操作</strong>，对上层表现为一致性的<strong>命名空间变更</strong></li>
+<li><strong>元信息缓存</strong>：路由层（DistSender/Router）按键进行 Range 映射</li>
+</ul>
+</section>
+<section id="写路径" class="slide level2">
+<h2>写路径</h2>
+<ol type="1">
+<li>客户端依据键查询<strong>元信息</strong>（Range 描述符），路由到目标 Range 的 <strong>Leaseholder</strong></li>
+<li><strong>写入提案</strong> → Raft 日志复制至多数派 → <strong>提交</strong>（commitIndex 前进）</li>
+<li>返回写成功，后台可触发<strong>意向清理或索引维护</strong>等</li>
+</ol>
+</section>
+<section id="读路径" class="slide level2">
+<h2>读路径</h2>
+<ul>
+<li><strong>强一致读</strong>：读 Leaseholder 或带有只读租约的副本</li>
+<li><strong>Follower Read</strong>：允许<strong>有界滞后</strong>的只读副本服务读请求，换取延迟优势（以可配置的新鲜度界限为条件）</li>
+</ul>
+<div class="callout callout-warning callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>警告</strong></p>
+</div>
+<div class="callout-content">
+<p>不同系统在术语与细节上有差异：是否允许 follower read、只读快照时间界限、租约与领导者角色是否合一等。本课程不纠结实现枝节。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="跨分片事务" class="slide level2 smaller">
+<h2>跨分片事务</h2>
+<ul>
+<li><p>代价来源多样：<strong>协调冲突</strong>（2PC/锁/MVCC） + <strong>网络往返</strong> + <strong>写放大</strong>（全局索引/意向清理）</p></li>
+<li><p>降低代价的思路：</p>
+<ul>
+<li><strong>分片键对齐冲突域</strong>，让大多数事务落在单分片</li>
+<li><strong>确定性调度</strong>，先定序后执行，减少在线协调</li>
+<li><strong>幂等写/去重键</strong>，降低重试副作用</li>
+</ul></li>
+</ul>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p>一个幂等（idempotence）操作无论执行多少次都会返回同样的结果。</p>
+</div>
+</div>
+</div>
+</section>
+<section id="分布式-join" class="slide level2 smaller">
+<h2>分布式 JOIN</h2>
+<ul>
+<li><p><strong>本地化 JOIN</strong>：提前把相关行<strong>共置</strong>（co-location）到同一分片</p></li>
+<li><p>把小表<strong>广播</strong>到大表所在分片</p></li>
+<li><p><strong>重分区（repartition）</strong>：按 JOIN 键把两边数据都重分片</p>
+<ul>
+<li>网络代价高，慎用</li>
+</ul></li>
+</ul>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>注记</strong></p>
+</div>
+<div class="callout-content">
+<p><strong>经验法则</strong>：</p>
+<ul>
+<li><strong>COLOCATE JOIN</strong>：若 <code>JOIN 键 = 分片键</code>，则倾向本地化，尤其是数据倾斜时；</li>
+<li><strong>BROADCAST JOIN</strong>：若一端远小，则广播小表；</li>
+<li><strong>SHUFFLE JOIN</strong>：都大且键不对齐，重分区（并行，代价可控）</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<section id="分片键设计" class="slide level2 smaller">
+<h2>分片键设计</h2>
+<ul>
+<li><strong>对齐冲突域</strong>：红包ID/订单ID/会话ID/租户ID等天然聚合冲突的键</li>
+<li><strong>避免单调写热点</strong>：引入随机化后缀或哈希前缀，但权衡范围查询</li>
+<li><strong>支持主路径查询</strong>：分片键出现在主要过滤条件或 JOIN 键上</li>
+<li><strong>考虑多维度</strong>：必要时采用<strong>层级分片</strong></li>
+<li><strong>索引策略匹配</strong>：全局索引与本地索引的写放大与查询代价平衡</li>
+<li><strong>弹性演化</strong>：能平滑增减桶、在线 split/merge/lease 转移</li>
+</ul>
+</section></section>
+<section>
+<section id="案例" class="title-slide slide level1 center">
+<h1>案例</h1>
+
+</section>
+<section id="例-1订单表的分片策略" class="slide level2 smaller">
+<h2>例 1：订单表的分片策略</h2>
+<ul>
+<li><p><strong>需求</strong>：按 <code>tenant_id</code> 隔离大客户，支持近 30 天订单的<strong>范围查询</strong>与<strong>报表聚合</strong></p></li>
+<li><p><strong>方案</strong>：Hash(<code>tenant_id</code>) → Range(<code>order_date</code>)</p></li>
+<li><p><strong>预期</strong>：</p>
+<ul>
+<li>单租户局部热点被哈希分散</li>
+<li>近 30 天范围查询命中有限数量 Range</li>
+<li>跨租户聚合：倾向 <strong>分布式聚合 → 汇总</strong></li>
+</ul></li>
+<li><p><strong>风险</strong>：全局索引写放大，跨租户 JOIN 代价升高</p></li>
+<li><p><strong>缓解</strong>：租户内本地索引＋异步汇总表</p></li>
+</ul>
+</section>
+<section id="例-2红包系统的热点治理" class="slide level2">
+<h2>例 2：红包系统的热点治理</h2>
+<ul>
+<li>分片键 = 红包ID（<strong>冲突域</strong>）</li>
+<li>秒杀时<strong>前台 split</strong> + <strong>租约转移</strong>到就近节点</li>
+<li>失败重试路径加<strong>幂等键</strong>与<strong>速率限制</strong></li>
+<li>对账报表走<strong>异步流水</strong>，不与在线交易抢锁</li>
+</ul>
+</section></section>
+<section>
+<section id="练习与小测" class="title-slide slide level1 center">
+<h1>练习与小测</h1>
+
+</section>
+<section id="单选" class="slide level2">
+<h2>单选</h2>
+<p>下列哪项最易导致<strong>写热点</strong>？</p>
+<p>A. Hash 分片 + 均匀键分布</p>
+<p>B. Range 分片 + 时间顺序写</p>
+<p>C. 广播 JOIN</p>
+<p>D. 重分区 JOIN</p>
+</section>
+<section id="判断" class="slide level2">
+<h2>判断</h2>
+<p><code>WHERE date_trunc('day', ts) = '2025-10-10'</code> 在多数系统中可被分区剪枝。</p>
+</section>
+<section id="判断-1" class="slide level2">
+<h2>判断</h2>
+<p>Follower Read 一定能提供“读到最新写入”的一致性。</p>
+</section>
+<section id="简答" class="slide level2">
+<h2>简答</h2>
+<p>为什么“分片键对齐冲突域”是首要原则？</p>
+</section>
+<section id="参考与延伸阅读" class="slide level2">
+<h2>参考与延伸阅读</h2>
+<p>Kleppmann, M. (2017). <em>Designing Data-Intensive Applications</em>. O’Reilly Media.</p>
+</section>
+<section id="下节预告" class="slide level2">
+<h2>下节预告</h2>
+<ul>
+<li><p><strong>第4讲：分布式事务与并发控制</strong></p>
+<ul>
+<li>2PC / 乐观 vs 悲观 / MVCC</li>
+<li>跨分片事务的冲突路径与代价</li>
+<li><strong>确定性事务</strong> 与 “先定序后执行”</li>
+</ul></li>
+</ul>
+</section></section>
+<section>
+<section id="附录" class="title-slide slide level1 center">
+<h1>附录</h1>
+
+</section>
+<section id="租户的概念" class="slide level2 smaller">
+<h2>租户的概念</h2>
+<p>租户（tenant）通常是一个“业务主体/组织单位”，它对自己的数据有隔离边界和独立运营需求。在订单域里，tenant_id 会写进每一条订单及其关联表，用来实现数据隔离、路由和授权。</p>
+<p>典型租户：</p>
+<ul>
+<li>电商平台（SaaS/商城型）：商家/店铺（shop_id / seller_id）</li>
+<li>外卖/到店平台：餐厅/门店（restaurant_id / store_id）</li>
+<li>支付/收单服务商：商户号（merchant_id）</li>
+<li>连锁/加盟体系：品牌-门店（brand_id / outlet_id）</li>
+<li>教育/SaaS 工具：学校/机构/工作区（school_id / workspace_id）</li>
+</ul>
+<blockquote>
+<p>谁对这批数据拥有业务主权、能配置规则、结算或权限，谁就是“租户”。</p>
+</blockquote>
+</section>
+<section id="表设计示例" class="slide level2 smaller">
+<h2>表设计示例</h2>
+<p><strong>目标</strong>：请求按 tenant_id 路由到“同一分片/租户组”，让绝大多数事务进到单组，读写都能本地化。</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode numberSource sql number-lines code-with-copy"><code class="sourceCode sql"><span id="cb6-1"><a href=""></a><span class="co">-- 订单主表</span></span>
+<span id="cb6-2"><a href=""></a><span class="kw">CREATE</span> <span class="kw">TABLE</span> orders (</span>
+<span id="cb6-3"><a href=""></a>  tenant_id     BIGINT <span class="kw">NOT</span> <span class="kw">NULL</span>,                <span class="co">-- 租户/商户/门店</span></span>
+<span id="cb6-4"><a href=""></a>  order_id      BIGINT <span class="kw">NOT</span> <span class="kw">NULL</span>,                <span class="co">-- 在租户域唯一，或全局唯一</span></span>
+<span id="cb6-5"><a href=""></a>  user_id       BIGINT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-6"><a href=""></a>  order_date    <span class="dt">TIMESTAMP</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-7"><a href=""></a>  status        <span class="dt">SMALLINT</span> <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-8"><a href=""></a>  amount_cents  BIGINT <span class="kw">NOT</span> <span class="kw">NULL</span>,</span>
+<span id="cb6-9"><a href=""></a>  <span class="kw">PRIMARY</span> <span class="kw">KEY</span> (tenant_id, order_id)             <span class="co">-- 复合主键：先租户，再订单</span></span>
+<span id="cb6-10"><a href=""></a>);</span>
+<span id="cb6-11"><a href=""></a></span>
+<span id="cb6-12"><a href=""></a><span class="co">-- 常用查询索引（可本地索引）</span></span>
+<span id="cb6-13"><a href=""></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> idx_orders_tenant_date</span>
+<span id="cb6-14"><a href=""></a>  <span class="kw">ON</span> orders (tenant_id, order_date);</span></code><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="全局可追踪-id-设计" class="slide level2 smaller">
+<h2>全局可追踪 ID 设计</h2>
+<p>ID 设计目标</p>
+<ul>
+<li><strong>全局唯一</strong>：跨服务、跨分片不碰撞<br>
+</li>
+<li><strong>时间有序</strong>：ID 随时间递增，便于<strong>日志排序、区间查询</strong><br>
+</li>
+<li><strong>本地生成</strong>：无中心协调或仅少量元数据（worker id），<strong>低延迟高吞吐</strong><br>
+</li>
+<li><strong>可追踪性</strong>：从 ID 中<strong>读出时间</strong>（及可选的机房/节点），帮助<strong>定位与回放</strong></li>
+</ul>
+<p><strong>经典 64 位 Snowflake</strong></p>
+<pre><code>bit:  [63] [62..................................22][21........12][11........0]
+      sign         timestamp (ms since epoch)       worker id        sequence</code></pre>
+<p><strong>128 位 ULID</strong></p>
+<pre><code>ULID = time(48b) || randomness(80b)
+Base32("time+rand") -&gt; 26 chars, e.g. 01J9YH8S2V4MZXA3RQP7B1K6TN</code></pre>
+
+</section></section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="slide04_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="slide04_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/reveal-chalkboard/plugin.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="slide04_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="slide04_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': true,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleChalkboard(event)\"><kbd>b</kbd> Toggle Chalkboard</a></li>\n<li class=\"slide-tool-item\" data-item=\"6\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleNotesCanvas(event)\"><kbd>c</kbd> Toggle Notes Canvas</a></li>\n<li class=\"slide-tool-item\" data-item=\"7\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.downloadDrawings(event)\"><kbd>d</kbd> Download Drawings</a></li>\n<li class=\"slide-tool-item\" data-item=\"8\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'chalkboard': {"buttons":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'slide',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1050,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, RevealChalkboard, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "已复制");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "已复制");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+            const codeEl = trigger.previousElementSibling.cloneNode(true);
+            for (const childEl of codeEl.children) {
+              if (isCodeAnnotation(childEl)) {
+                childEl.remove();
+              }
+            }
+            return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

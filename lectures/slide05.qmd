@@ -1,0 +1,489 @@
+---
+title: "分布式数据库开发"
+subtitle: "第4讲：分布式事务与并发控制"
+author: "叶鸿"
+date: "2025-10-15"
+lang: zh-CN
+format:
+  revealjs:
+    theme: [default]
+    slide-number: true
+    toc: false
+    overview: true
+    transition: slide
+    code-line-numbers: true
+    preview-links: auto
+    chalkboard: true
+mermaid-format: svg
+---
+
+## 本讲学习目标 {.smaller} 
+
+- **跨分片事务成本**：协调、网络往返、写放大、尾延迟  
+- **2PC 开销与故障窗口**：prepare/commit、阻塞与恢复  
+- **并发控制对比**：悲观（2PL/锁） vs 乐观（OCC/TSO） vs 可串行化（SSI）  
+- **典型异常**：写偏差（write skew）、不可重复读、幻读  
+- **不变式建模**：业务不变式/跨对象不变式，**物化冲突**、显式锁  
+- **确定性事务**：先定序后执行（Calvin）  
+
+# 事务与隔离
+
+## ACID
+
+* **A（原子性）**：要么都成功，要么都失败
+* **C（一致性）**：不变式不被破坏（需应用配合）
+* **I（隔离性）**：并发读写的**对外可见次序**
+* **D（持久性）**：提交即持久
+
+## 隔离级别
+
+* Serializable：结果与某个串行顺序等价，最安全
+* Repeatable Read / SI：读快照，可能写偏差
+* Read Committed：避免脏读，可能不可重复读、幻读
+* Read Uncommitted：连脏读都可能发生
+
+## 隔离级别：图示
+
+```{mermaid}
+flowchart TB
+  S["Serializable(串行等价)"] -->|放宽| RR["Repeatable Read/SI(可重复读/快照隔离)"]
+  RR -->|放宽| RC["Read Committed(提交可见)"]
+  RC -->|放宽| RU["Read Uncommitted(未提交可见)"]
+  
+  classDef strong fill:#cfe9cf,stroke:#2f7d32,color:#000
+  classDef mid fill:#ffe7ba,stroke:#ad6800,color:#000
+  classDef weak fill:#ffd6d6,stroke:#a8071a,color:#000
+
+  class S strong
+  class RR mid
+  class RC mid
+  class RU weak
+```
+
+## MVCC 快照隔离的利与弊
+
+* **优势**：读不阻写、写不阻读，吞吐友好
+* **风险**：可能出现**写偏差（write skew）**等**不可串行化**异常（跨对象不变式被破坏）
+
+## 不变式
+
+**不变式**是在任意并发/故障情况下，业务状态必须始终满足的规则。常见类型：
+
+  - **数量约束**：库存 ≥ 0、账户余额 ≥ 0  
+  - **唯一性**：某时段同一资源只能被一个实体占用  
+  - **覆盖性**：至少有一人值班，至少一份副本可读  
+
+::: callout-note
+**区分**：SQL 约束（如 `CHECK/UNIQUE`）能覆盖很多局部不变式，**分布式并发**常把问题放大到跨对象、跨分片的层面，需要额外设计。
+:::
+
+## 跨对象不变式 {.smaller}
+
+- **跨对象/跨表/跨键**才能表达的业务规则。示例： 
+  - **值班**：`至少一人 on_call` 涉及多行 `shifts`  
+  - **库存**：同时扣减多个 SKU，整体库存不得为负  
+  - **预约**：同一 `(room_id, time_slot)` 只能被一个订单占用（跨多表写入）
+- **难点**：这些不变式**不止依赖当前写入的那一行**，还依赖**其他行或其他分片的状态**，因此单靠每行的 MVCC 快照可能**看不见**全局冲突，产生写偏差。
+
+## 管理不变式 {.smaller}
+
+1. **让冲突“显性化”成可加锁的对象**
+  * 把跨对象规则**物化**为**单行/单键**，在事务内 `SELECT ... FOR UPDATE` 锁住它  
+  * 例：维护 `oncall_guard( id=1, counter )`，任何“下线”操作都需先锁此行并检查 `counter > 1`
+2. **选择能保证串行语义的隔离级别**  
+  * **Serializable/SSI**：让系统在检测到“危险结构”时中止一方，避免写偏差  
+  * 代价：可能的冲突回滚与吞吐下降
+
+
+# 跨分片访问
+
+## 代价来源
+
+::: {.r-stack }
+**跨分片 = 协调 + 往返 + 放大 + 延迟**
+:::
+
+* **协调**：锁/版本校验/两阶段提交（2PC）
+* **网络往返**：多分片读写 + 冲突重试
+* **写放大**：全局二级索引、意向锁/清理
+* **尾延迟**：长尾请求与失败重试叠加
+
+## 两阶段提交 {.smaller}
+
+```{mermaid}
+sequenceDiagram
+  participant C as 协调者
+  participant P1 as 分片1(参与者)
+  participant P2 as 分片2(参与者)
+  C->>P1: Prepare(txn_id, writes)
+  C->>P2: Prepare(txn_id, writes)
+  P1-->>C: VoteCommit / VoteAbort
+  P2-->>C: VoteCommit / VoteAbort
+  C->>P1: Commit / Abort
+  C->>P2: Commit / Abort
+```
+
+* **优点**是跨分片**原子提交**
+* **代价**是双轮网络、**阻塞**风险（协调者或参与者在关键时刻崩溃）
+
+## 2PC 的故障窗口
+
+* 协调者在**发出 Commit 前崩溃**：参与者已就绪，但**必须阻塞**等待恢复（防丢原子性）
+* 参与者在 **Prepare 后**崩溃：恢复后需读取**日志**决议
+* **启示**：需要**预写日志（WAL）**与**严格恢复流程**，在实践中常用**共识复制**降低阻塞概率
+
+# 并发控制
+
+## 悲观并发控制（2PL/锁）
+
+* **做法**：读写前先**加锁**（`SELECT ... FOR UPDATE`/范围锁）
+* **优点**：直观、强隔离
+* **代价**：锁竞争、死锁检测、放大跨分片延迟
+* **适用**：高冲突场景、强一致业务不变式
+
+## 乐观并发控制（OCC/版本号/TSO）
+
+* **做法**：先读后写，提交时**校验版本/时间戳**，失败则**重试**
+* **优点**：低争用下吞吐高、锁少
+* **代价**：冲突时反复重试；跨分片多一次**校验往返**
+
+```sql
+-- 更新库存（OCC）
+UPDATE stock
+SET qty = qty - 1, version = version + 1
+WHERE sku = :sku AND version = :old_version;
+-- 受影响行数=0 表示冲突 → 重试
+```
+
+## 乐观事务图示
+```{mermaid}
+sequenceDiagram
+  participant T1 as Txn T1
+  participant DB as 数据库/分片
+  participant T2 as Txn T2
+
+  Note over T1,T2: 阶段1：读取快照（含版本/时间戳）
+  T1->>DB: SELECT ... (读 version=v0)
+  T2->>DB: SELECT ... (读 version=v0)
+
+  Note over T1,T2: 阶段2：各自计算写集（暂存）
+  T1-->>T1: 业务计算，准备写 W1
+  T2-->>T2: 业务计算，准备写 W2
+
+  Note over T1,T2: 阶段3：提交校验（Validate）
+  T1->>DB: COMMIT? IF version==v0
+  DB-->>T1: OK → 写入 W1，version=v1
+  T2->>DB: COMMIT? IF version==v0
+  DB-->>T2: FAIL（版本已变）→ 冲突
+
+  Note over T2: 阶段4：重试（指数退避）
+  T2->>DB: 重新读取最新快照（version=v1）并重试
+```
+
+## 可串行化
+
+* **Strict 2PL**：全程持锁，代价高
+* **SSI（Serializable Snapshot Isolation）**：在 SI 基础上检测危险结构并中止一方，兼顾吞吐与正确性
+* **实践**：当需要**跨对象不变式**可靠成立，优先选 **Serializable / SSI**，否则用**显式锁/物化冲突**兜底
+
+## SI 下的写偏差
+
+> 两医生轮班的经典例子，规则是**至少有一位医生 on_call**。
+
+```sql
+-- 表结构
+CREATE TABLE shifts(doctor TEXT, on_call BOOLEAN);
+
+-- 事务A：Dr. Alice 下线
+BEGIN;          -- 设置为 SI/REPEATABLE READ
+SELECT count(*) FROM shifts WHERE on_call = true; -- 读到 1 (Bob)
+UPDATE shifts SET on_call = false WHERE doctor='Alice';
+-- 事务B：Dr. Bob 同时下线
+BEGIN;
+SELECT count(*) FROM shifts WHERE on_call = true; -- 也读到 1 (Alice)
+UPDATE shifts SET on_call = false WHERE doctor='Bob';
+-- 两个事务都能提交 → 结果: 0 人 on_call
+```
+
+## 写偏差图示
+
+```{mermaid}
+sequenceDiagram
+  participant A as 事务A
+  participant DB as DB(SI)
+  participant B as 事务B
+
+  A->>DB: 读快照: on_call人数=1(另一个人)
+  B->>DB: 读快照: on_call人数=1(另一个人)
+  A->>DB: 更新: 自己下线(on_call=false)  -- 不冲突行
+  B->>DB: 更新: 自己下线(on_call=false)  -- 不冲突行
+  A-->>DB: COMMIT 成功
+  B-->>DB: COMMIT 成功
+  Note over A,B: 最终 on_call=0 引起写偏差，不变式被破坏
+```
+
+## 写偏差的两种修复方式
+
+* **显式锁**：让读依赖也加锁（悲观）
+
+```sql
+BEGIN;
+SELECT * FROM shifts WHERE on_call = true FOR UPDATE; -- 锁住“有人值班”的事实
+UPDATE shifts SET on_call = false WHERE doctor='Alice';
+COMMIT; -- 另一事务将被阻塞/冲突
+```
+
+* **物化冲突**：把“不变式”转成**可加锁的行**（例如维护一张 `oncall_count` 单行表，更新时对其 `SELECT ... FOR UPDATE`）
+
+  * 好处：把“跨行规则”降维成**单行资源**，锁定即可避免写偏差
+
+## 修复方法
+
+```{mermaid}
+flowchart TD
+  subgraph SI-unsafe[SI 直接更新]
+    R1[读: on_call=1] --> U1[各自更新不同记录]
+    U1 --> C1[两边都提交]
+    C1 --> X1[违反不变式]
+  end
+
+  subgraph Locked[显式锁/物化冲突]
+    L1[读并锁: guard行] --> Ck[检查计数/唯一性]
+    Ck --> U2[允许: 更新一人下线]
+    L1 -.->|阻塞| Bk[另一事务读锁失败/等待]
+  end
+```
+
+# 分布式事务经验谈
+
+## 方法一
+
+::: {.r-stack}
+**让大多数事务放在在单个分片**
+:::
+
+* **数据建模/分片键**对齐**冲突域**（如 `tenant_id`、`account_id`）
+* 把跨对象不变式尽量**限定在同一分片**内完成
+* **收益**：避免 2PC，降低长尾与失败重试成本
+
+::: callout-tip
+**用分片把问题变小**，是分布式事务的第一法则。**先避免，再优化**
+:::
+
+## 方法二
+
+::: {.r-stack}
+**原子提交用 2PC，但要把阻塞风险工程化**
+:::
+
+* **WAL 持久**：协调者与参与者在 `prepare/commit` 前后都要**先写日志**
+* **超时与恢复**：为 `in_doubt` 事务设计**恢复流程**（重放/仲裁/人工兜底）
+* **幂等提交**：`COMMIT`/`ABORT` 处理必须**幂等**，重复到达也安全
+* **监控**：暴露**准备态**滞留计数与时长，避免**卡死**隐患
+
+## 方法三
+
+::: {.r-stack}
+**用共识复制降低 2PC 的阻塞面**
+:::
+
+* 把**提交决议写入共识日志**（Paxos/Raft），各分片据此达成一致
+* 实践上，如果每个分片内部用 Raft 复制日志，协调者把**提交记录**写进各分片多数派后即可认为决议达成
+* **收益**：在 Leader 变更或节点故障下，**决议不会丢失**，阻塞窗口显著缩小
+
+::: callout-important
+**共识 ≠ 2PC**，但共识日志可承载提交决议，提升稳健性
+:::
+
+## 方法四
+
+::: {.r-stack}
+**物化冲突（Materializing Conflicts）**
+:::
+
+* 把“跨行/跨表的不变式”映射成**可加锁**或**可唯一约束**的实体，例如
+
+  * **唯一预约** → `UNIQUE(room_id, slot)`
+  * **至少一人值班** → `oncall_count` 表单行 + `FOR UPDATE`
+* **收益**：让冲突在**单点**被检测与排队，避免隐形并发漏洞
+
+## 物化冲突示例
+```sql
+-- 物化“至少一人 on_call”的不变式
+CREATE TABLE oncall_guard (id INT PRIMARY KEY, cnt INT NOT NULL);
+INSERT INTO oncall_guard VALUES (1, 2);
+
+BEGIN; -- 事务：Dr. Alice 下线
+SELECT cnt FROM oncall_guard WHERE id = 1 FOR UPDATE;
+-- 读取并锁住计数行，避免并发写偏差
+UPDATE shifts SET on_call = false WHERE doctor='Alice';
+UPDATE oncall_guard SET cnt = cnt - 1 WHERE id = 1 AND cnt > 1;
+COMMIT; -- 若 cnt==1，将受影响行数=0 → 事务回滚/报错
+```
+
+## 方法五
+
+::: {.r-stack}
+**乐观 + 幂等/重试/去重**
+:::
+
+* **乐观提交 + 版本校验**，失败指数退避重试
+* 用**幂等键/去重表**保障**最多一次**效果
+* 适用于读多写少、低争用、**端到端可重试**的业务
+
+## 方法六
+
+::: {.r-stack}
+**弱一致场景的替代手段**
+:::
+
+* **合并函数/CRDT**：计数、集合并等**可交换**操作，分区合并时不会冲突
+* **异步工作流/补偿**：把跨系统操作拆解为**Saga**（本地提交 + 补偿动作），牺牲短暂一致性换可用性
+
+::: callout-caution
+仅适用于**对一致性要求不那么严格**的场景，核心交易仍应使用事务。
+:::
+
+## Saga 是什么？
+- **分布式长事务模式**：把一个跨服务的大事务拆成**一串本地事务** `T1 → T2 → … → Tn`，每步都**独立提交**；若中途中断，按相反顺序执行**补偿动作** `Ck … C2 C1` 回滚业务影响。  
+- **目标**：避免 2PC 的全局锁与阻塞，在**可接受的最终一致**前提下保证业务可恢复。  
+- **本质**：**前向恢复（Forward Recovery）+ 业务补偿（Compensation）**，而非数据库层的原子回滚。
+
+## 图示
+
+```{mermaid}
+sequenceDiagram
+  autonumber
+  participant O as Orchestrator
+  participant ODR as Order
+  participant I as Inventory
+  participant P as Payment
+
+  O->>ODR: Create(order=PENDING, saga_id)
+  ODR-->>O: OK(order_id)
+
+  O->>I: Reserve(order_id, sku, qty)
+  I-->>O: OK
+
+  O->>P: Charge(order_id, amount)
+  alt 支付成功
+    P-->>O: OK
+    O->>ODR: Confirm(order_id)  %% 订单 -> CONFIRMED
+    ODR-->>O: OK
+  else 支付失败
+    P-->>O: FAIL
+    O->>I: Compensate: Release(order_id, sku, qty)
+    I-->>O: OK
+    O->>ODR: Compensate: Cancel(order_id) %% 订单 -> CANCELLED
+    ODR-->>O: OK
+  end
+```
+
+# 确定性事务
+
+## 先定序，后执行
+
+* 先通过**全局有序日志**为事务**定序**，各分片**按相同次序**执行
+* 运行期无需两阶段锁/两阶段提交的反复协调，冲突在**定序阶段**被解决
+* 事务**读写集可预测**或可通过先探测获得，系统需保证副本对同一日志做同样决定
+
+## 图示
+
+```{mermaid}
+flowchart LR
+  A[接收事务] --> B["全局定序(Log)"]
+  B --> C1[分片1: 按序执行]
+  B --> C2[分片2: 按序执行]
+  C1 --> D[结果一致]
+  C2 --> D
+```
+
+## 与 2PC/乐观的对比
+
+* 高冲突/跨分片多的场景：**定序**减少运行期协调与重试
+* 动态读写集或强交互式事务：获取读写集成本高 → **传统 OCC/锁**可能更合适
+
+# 小结和速记
+
+## 事务与并发控制 
+
+* **分片建模**：让 90%+ 事务置于单分片，跨分片路径可观测
+* **选择隔离**：能用 **Serializable/SSI** 就别用更低级别
+* **2PC 工程化**：WAL、超时、恢复、幂等、监控
+* **乐观策略**：版本校验 + 幂等重试 + 指数退避
+* **共识承载决议**：提交决议写入共识日志，缩小阻塞窗口
+* **物化冲突**：把不变式转成可加锁/唯一的对象
+* **确定性路线**：读写集可预测时考虑“定序→执行”
+
+## 反模式
+
+* 把**跨对象不变式**交给 SI 侥幸维持
+* 没有**幂等/去重**就做端到端重试
+* XA 式跨异构系统 2PC，但缺乏统一 WAL/恢复 → **in_doubt** 积压
+* 业务热点键不加保护，造成**雪崩式重试**
+
+# 练习与小测
+
+## 判断
+
+2PC 在协调者崩溃时一定不会阻塞参与者。
+
+## 判断
+
+OCC（乐观并发控制）完全不需要任何锁。
+
+## 判断
+
+选择 `tenant_id` 作为分片键能显著降低跨分片事务概率。
+
+## 判断
+
+可串行化（serializable）与线性一致性（linearizability）是同一概念。
+
+## 选择
+
+2PC 的**固有成本**是下列哪一项？ 
+
+A. 双轮网络往返
+
+B. 不需要日志
+
+C. 协调者不可能成为单点
+
+D. 参与者可单方面提交  
+
+## 选择
+
+在“确定性事务”系统中，哪一步能显著减少运行期协调？
+
+A. 全局有序日志先定序 
+
+B. 增加锁粒度 
+
+C. 只用只读副本 
+
+D. 提升缓存  
+
+## 选择
+
+物化冲突（Materializing Conflicts）的适用点？（多选）
+
+A. 跨对象不变式 
+
+B. 热点资源排队 
+
+C. 单行更新且无约束 
+
+D. 需可观测/可审计的冲突点 
+
+## 简答
+
+OCC 在什么场景表现更好？
+
+## 简答
+
+什么时候优先用“物化冲突”？
+
+## 下节预告
+
+* **分布式查询**：本地、广播、重分区，如何在分片下做高效 JOIN 与聚合。
